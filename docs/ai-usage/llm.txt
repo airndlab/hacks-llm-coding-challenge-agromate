@@ -1,0 +1,101 @@
+# Hackathon LLM Prompts (KISS Version)
+
+Below is a concise set of prompts you can use in Cursor IDE. They adhere to the KISS principle, support incremental development with a working MVP at every stage, and are easy to maintain by a beginner.
+
+---
+
+## Prompt 1: Clarify Requirements
+
+> **Prompt**:  
+> "We have a hackathon case: [brief business goal]. Summarize the core requirements (technical and business). Which features must our MVP include to solve the case effectively? Suggest only essential tasks first so we can keep it simple and functional."
+
+**Why**  
+- Ensures a minimal, working MVP.
+- Prevents over-engineering.
+
+---
+
+## Prompt 2: Propose Simple Architecture
+
+> **Prompt**:  
+> "Given these requirements: [list of features], propose a lightweight, maintainable project structure. Focus on clear folder organization, minimal dependencies, and short, readable classes or modules that a junior can easily understand."
+
+**Why**  
+- Encourages KISS-friendly architecture.
+- Ensures simple iteration.
+
+---
+
+## Prompt 3: Generate Code Skeleton
+
+> **Prompt**:  
+> "Create a basic code skeleton for our MVP. Keep names meaningful and the logic straightforward. No extra checks or optimization unless absolutely necessary. Provide a few inline comments that explain the key parts."
+
+**Why**  
+- Produces a working baseline.
+- Keeps complexity low.
+
+---
+
+## Prompt 4: Add Incremental Features
+
+> **Prompt**:  
+> "We have this working MVP: [describe current state]. Suggest a small, incremental feature that adds clear value. Update the code accordingly, ensuring it remains readable and consistent with the existing structure."
+
+**Why**  
+- Maintains a working state at all times.
+- Implements new features in bite-sized chunks.
+
+---
+
+## Prompt 5: Refactor for Readability
+
+> **Prompt**:  
+> "Below is our current code: [paste code]. Propose improvements for naming, structure, and clarity while keeping logic simple. Avoid introducing unnecessary abstractions. Make sure a junior can still follow it."
+
+**Why**  
+- Improves maintainability without overcomplicating.
+- Keeps a tidy codebase.
+
+---
+
+## Prompt 6: Basic Testing
+
+> **Prompt**:  
+> "Suggest minimal tests to confirm our core logic works. Keep them direct and easy for a beginner to maintain. Use only basic assertions to ensure that critical functionality doesn’t break."
+
+**Why**  
+- Ensures core stability.
+- Avoids test bloat.
+
+---
+
+## Prompt 7: Validate User Experience (UX)
+
+> **Prompt**:  
+> "Review our user flow: [brief flow description]. How can we simplify the UX so users see immediate progress and minimal confusion? Propose quick wins without elaborate design overhead."
+
+**Why**  
+- Keeps user interface understandable.
+- Improves usability with minimal effort.
+
+---
+
+## Prompt 8: Document LLM Usage
+
+> **Prompt**:  
+> "Summarize how we used LLM assistance in architecture, coding, and testing. Show clear examples of AI-generated snippets. Make it concise and highlight the value the assistant brought to the project."
+
+**Why**  
+- Demonstrates explicit AI usage for hackathon criteria.
+- Ensures transparency.
+
+---
+
+### How to Use
+1. **Copy-Paste** each prompt into Cursor IDE when you reach the relevant stage.  
+2. **Adapt** them to your current context, code, or backlog.  
+3. **Keep It Simple**: Only add features that solve immediate needs.  
+4. **Maintain an MVP** at every step.
+
+With these prompts, you can iterate quickly and produce a solution that is clean, understandable, and aligned with hackathon requirements.
