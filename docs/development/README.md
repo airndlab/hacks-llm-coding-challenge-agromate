@@ -8,7 +8,8 @@
 
 - Python 3.8+ (или другие языки/платформы)
 - Дополнительные зависимости (будут уточнены)
-- Доступ к API WhatsApp
+- Доступ к API Telegram
+- Доступ к Google Drive API
 
 ### Установка
 
@@ -39,9 +40,9 @@ python app.py --debug
 
 ```
 ├── src/                     # Исходный код проекта
-│   ├── whatsapp/            # Модуль интеграции с WhatsApp
+│   ├── telegram/            # Модуль интеграции с Telegram
 │   ├── processor/           # Модуль обработки и классификации
-│   ├── excel/               # Модуль генерации Excel-отчетов
+│   ├── google_sheets/       # Модуль экспорта в Google Sheets
 │   └── api/                 # API проекта
 ├── tests/                   # Тесты
 ├── docs/                    # Документация
@@ -54,13 +55,13 @@ python app.py --debug
 
 ## Ключевые компоненты
 
-### WhatsApp Connector
+### Telegram Connector
 
-**Назначение:** Подключение к WhatsApp и извлечение сообщений.
+**Назначение:** Подключение к Telegram и извлечение сообщений.
 
 **Интерфейс:**
 ```python
-class WhatsAppConnector:
+class TelegramConnector:
     def connect(self, chat_id: str) -> bool:
         """Подключение к указанному чату."""
         pass
@@ -86,15 +87,19 @@ class DataProcessor:
         pass
 ```
 
-### Excel Generator
+### Google Sheets Generator
 
-**Назначение:** Генерация Excel-отчетов.
+**Назначение:** Генерация отчетов и экспорт в Google Sheets.
 
 **Интерфейс:**
 ```python
-class ExcelGenerator:
+class GoogleSheetsGenerator:
     def create_report(self, data: List[Dict], template: str) -> str:
         """Создание отчета на основе шаблона."""
+        pass
+        
+    def export_to_drive(self, report_path: str, drive_folder: str) -> str:
+        """Экспорт отчета в Google Drive."""
         pass
 ```
 
@@ -130,7 +135,7 @@ class ExcelGenerator:
 pytest
 
 # Запуск конкретного модуля
-pytest tests/test_whatsapp.py
+pytest tests/test_telegram.py
 ```
 
 ### Покрытие кода
@@ -153,5 +158,6 @@ pytest tests/test_whatsapp.py
 
 ## Ресурсы
 
-- [Документация WhatsApp Business API](https://developers.facebook.com/docs/whatsapp)
+- [Документация Telegram Bot API](https://core.telegram.org/bots/api)
+- [Документация Google Sheets API](https://developers.google.com/sheets/api)
 - Другие ресурсы (будут добавлены) 
