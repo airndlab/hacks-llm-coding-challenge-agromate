@@ -2,6 +2,7 @@ import logging
 
 from aiogram import Bot
 from aiogram import Dispatcher
+from aiogram.filters import CommandStart
 from aiogram.types import Message, ReactionTypeEmoji
 
 from app_client import create_message
@@ -10,6 +11,27 @@ from models import ChatMessageCreateRequest
 logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
+
+
+@dp.message(CommandStart())
+async def command_start_handler(message: Message) -> None:
+    await message.reply((
+        f"🌾 Привет, коллега!"
+        f"\n\n"
+        f"Я — твой цифровой помощник в поле бумажек. Помогаю с бюрократическим урожаем таким как отчёты."
+        f"\n"
+        f"Кидай сюда данные по операциям — посев, обработка, подкормка, что угодно — я всё упакую как надо."
+        f"\n\n"
+        f"📋 Чтобы начать — просто напиши сообщение с деталями работы."
+        f"\n"
+        f"✍️ Например: * «17.04 юг, дисковка, подсолнечник, 45 га» *"
+        f"\n\n"
+        f"Если запутаешься — не страшно, я рядом."
+        f"\n"
+        f"А если совсем всё плохо — зови на помощь /help."
+        f"\n\n"
+        f"Ну что, поехали? 🚜"
+    ))
 
 
 @dp.message()
