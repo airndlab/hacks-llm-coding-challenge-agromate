@@ -10,7 +10,7 @@ services:
     environment:
       ENV_FILE: /.env
     volumes:
-      - ./agromate/.env:/.env
+      - ./.env:/.env
       - ./agromate/data:/data
 
   bot:
@@ -22,7 +22,7 @@ services:
     environment:
       ENV_FILE: /.env
     volumes:
-      - ./agromate/.env:/.env
+      - ./.env:/.env
 
   db:
     image: postgres:17-alpine
