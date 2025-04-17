@@ -81,7 +81,7 @@ async def process_report(chat_message_id: int):
         except Exception as e:
             chat_message.status = MessageStatus.failed
             chat_message.status_text = str(e)
-            logger.error("Error: {e}", exc_info=True)
+            logger.error(f"Error: {e}", exc_info=True)
         await session.commit()
     try:
         await send_reactions(ChatMessageReactionRequest(
@@ -89,6 +89,18 @@ async def process_report(chat_message_id: int):
             message_id=chat_message.message_id,
             status=chat_message.status,
         ))
+        if settings.bot_reply_on_failed and chat_message.status == MessageStatus.failed:
+            await reply_on_message(ChatMessageReplyRequest(
+                chat_id=chat_message.chat_id,
+                message_id=chat_message.message_id,
+                text=(
+                    f"🌾 Нашла коса на камень..."
+                    f"\n\n"
+                    f"Что-то пошло не так при обработке отчёта."
+                    f"\n\n"
+                    f"{chat_message.status_text}"
+                )
+            ))
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)
 

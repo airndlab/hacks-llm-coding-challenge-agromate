@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     debug: bool
     db_url: str
     bot_url: str
+    bot_reply_on_failed: bool
     llm_api_base_url: str
     llm_api_key: str
     configs_path: str
