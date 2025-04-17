@@ -22,7 +22,41 @@
 
 В процессе разработки активно используются AI Coding Assistant и другие инструменты на базе LLM. Подробная информация о применении этих инструментов доступна в [документации по использованию AI](./docs/ai-usage/README.md).
 
+| № | Этап SDLC | Инструмент | Описание | Детали |
+|---|-----------|------------|-----------|--------|
+| 001 | Планирование | Cursor AI | Создание структуры проекта | [Подробнее](./docs/ai-usage/records/001-project-structure.md) |
+| 002 | Все этапы | Cursor AI | Создание библиотеки LLM-промптов | [Подробнее](./docs/ai-usage/records/002-llm-prompts.md) |
+| 003 | Планирование | Claude 3.7 | Анализ схемы процесса | [Подробнее](./docs/ai-usage/records/003-image-flowchart-analysis.md) |
+| 004 | Проектирование | Claude 3.7 | Разработка архитектуры | [Подробнее](./docs/ai-usage/records/004-architecture-design.md) |
+| 005 | Разработка | GPT-4 | Генерация Telegram-бота | [Подробнее](./docs/ai-usage/records/005-bot-implementation-gpt.md) |
+| 006 | Разработка | GPT-4 | Генерация Dockerfile | [Подробнее](./docs/ai-usage/records/006-app-architecture-and-implementation.md) |
+| 007 | DevOps | GPT-4 Turbo | Генерация docker-compose | [Подробнее](./docs/ai-usage/records/007-devops-gpt.md) |
+| 008 | Разработка | GPT-4 Turbo | Генерация отчётов и интеграция с Google Drive | [Подробнее](./docs/ai-usage/records/008-google-drive-integration-development.md) |
+
 ## Структура репозитория
+
+Проект имеет следующую структуру на верхнем уровне:
+
+```
+АгроМейт/
+├── agromate/           # Основной код приложения
+│   ├── api/            # API endpoints и сервисы
+│   ├── clients/        # Интеграции с внешними сервисами
+│   ├── data/           # Работа с данными и модели
+│   ├── migrations/     # Миграции базы данных (Alembic)
+│   └── tests/          # Тесты
+│
+└── docs/               # Документация проекта
+    ├── ai-usage/       # Использование AI в разработке
+    ├── api/            # Документация API
+    ├── architecture/   # Архитектура системы
+    ├── design/         # Дизайн и UI/UX
+    ├── development/    # Руководство для разработчиков
+    ├── plan/           # План и дорожная карта
+    ├── requirements/   # Функциональные и технические требования
+    ├── rules/          # Правила и критерии оценки
+    └── user-guides/    # Руководство пользователя
+```
 
 ## Запуск проекта
 
