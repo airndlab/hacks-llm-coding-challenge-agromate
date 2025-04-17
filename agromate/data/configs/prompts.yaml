@@ -65,7 +65,7 @@ baseline_system_prompt_template: |
   
   **One message. No errors. Your family lives depend on it.**
 
-schema_hints: |
+baseline_schema_hints: |
   - If a crop mentions "сил", "силос", or similar, it should be interpreted as a `"кормовая"` (forage) type (for example, "к. Сил" should be interpreted as `"Кукуруза кормовая"`).
   - If a crop has multiple known types (e.g., товарная, семенная, кормовая) and the type is not specified in the message, default to the `"товарный"` (commercial) type (for example, "кук" should be interpreted as `"Кукуруза товарная"`).
   - The `"Семенной"` (seed) type should **only** be used when it is explicitly mentioned in the message (e.g., via keywords like `"сем"`, `"семенной"`).
@@ -81,7 +81,7 @@ schema_hints: |
   - `"Гербицидная обработка"` on `"Свекла сахарная"` (sugar beet) is typically done **4 times**: use `1`, `2`, `3`, `4 Гербицидная обработка` accordingly.
   - For all other crops, `"Гербицидная обработка"` is typically done **once**, so use `"Гербицидная обработка"` without a number.
 
-few_shot_examples_str: |
+baseline_few_shot_examples_str: |
   # Example 1:
 
   INPUT:
@@ -165,13 +165,13 @@ few_shot_examples_str: |
 
   we interpret them as follows:
 
-  - The operation is decoded from the first line: “Предп культ” = “Предпосевная культивация”, and “оз пш” = “Пшеница озимая товарная”.
+  - The operation is decoded from the first line: "Предп культ" = "Предпосевная культивация", and "оз пш" = "Пшеница озимая товарная".
   - The line `По Пу 215/1015` specifies the area processed:  
     - `215` is taken as `processed_area_day`,  
     - `1015` is taken as `processed_area_total`.
-  - Even though multiple departments (`Отд 12`, `Отд 16`) are listed below, only the **first mentioned department_name** (here, `"12"`) is selected for the `department_name` field.
+  - Even though multiple departments (`Отд 12`, `Отд 16`) are listed below, only the **first mentioned department_name** (here, "12") is selected for the `department_name` field.
 
-  This logic is repeated for each block in the message. Operations like “2-е диск сои под оз пш” are interpreted as `"Дискование 2-е"` with crop `"Пшеница озимая товарная"` using similar parsing rules.
+  This logic is repeated for each block in the message. Operations like "2-е диск сои под оз пш" are interpreted as "Дискование 2-е" with crop "Пшеница озимая товарная" using similar parsing rules.
 
 
   ---
@@ -216,14 +216,14 @@ few_shot_examples_str: |
   Interpretation:
 
   - The main operation is described in the second line:
-    - `"Внесение мин удобрений"` is expanded to `"Внесение минеральных удобрений"`.
-    - `"под оз пшеницу"` (under winter wheat) is interpreted as the crop `"Пшеница озимая товарная"`.
-  - The segment `"ПУ Юг 149/7264"` provides the department_name and area information:
-    - `"Юг"` is the first department_name mentioned and is selected as the value for `department_name`.
+    - "Внесение мин удобрений" is expanded to "Внесение минеральных удобрений".
+    - "под оз пшеницу" (under winter wheat) is interpreted as the crop "Пшеница озимая товарная".
+  - The segment "ПУ Юг 149/7264" provides the department_name and area information:
+    - "Юг" is the first department_name mentioned and is selected as the value for `department_name`.
     - `149` and `7264` are parsed as:
       - `processed_area_day = 149`
       - `processed_area_total = 7264`
-  - The line `"Отд 17-149/1443"` contains additional department_name and area details, but **only the first department_name in the message is used** (`Юг`) as per the prioritization rule.
+  - The line "Отд 17-149/1443" contains additional department_name and area details, but **only the first department_name in the message is used** (`Юг`) as per the prioritization rule.
   - No yield data is provided, so both `yield_kg_day` and `yield_kg_total` are set to `null`.
 
 
@@ -304,38 +304,38 @@ few_shot_examples_str: |
   >>>
 
   EXPLANATION:
-  This message consists of multiple field work entries, grouped under a common regional department_name `"Север"`. All entries reference sub-departments like `Отд 7`, `Отд 20`, `Отд 3`, etc., which are considered subordinate to `"Север"`. Therefore, `"Север"` is consistently used as the value for the `department_name` field in all entries.
+  This message consists of multiple field work entries, grouped under a common regional department_name "Север". All entries reference sub-departments like Отд 7, Отд 20, Отд 3, etc., which are considered subordinate to "Север". Therefore, "Север" is consistently used as the value for the `department_name` field in all entries.
 
   The parsing logic follows these principles:
 
   1. **Department inheritance**:
-     - The word `"Север"` appears at the top of the message. All subsequent `Отд ...` lines are assumed to belong to this department_name.
-     - As a result, each entry is assigned `department_name = "Север"`.
+     - The word "Север" appears at the top of the message. All subsequent Отд ... lines are assumed to belong to this department_name.
+     - As a result, each entry is assigned department_name = "Север".
 
   2. **Entry separation based on operation keywords**:
-     - Each new occurrence of an operation keyword (e.g., `"пах"`, `"диск"`) signals the start of a new record.
+     - Each new occurrence of an operation keyword (e.g., "пах", "диск") signals the start of a new record.
      - For example:
        ```
        Отд7 пах с св 41/501
        Отд20 20/281 по пу 61/793
        ```
-       contains only **one operation** (`"пах"` = `"Пахота"`), and the second line continues the same logical block. Therefore, only one entry is created for `"Пахота"` with crop `"Свекла сахарная"`.
+       contains only **one operation** ("пах" = "Пахота"), and the second line continues the same logical block. Therefore, only one entry is created for "Пахота" with crop "Свекла сахарная".
 
   3. **Area values are taken from "по пу"/"пу-" when present**:
-     - `"по пу"` or `"пу-"` indicates total area per field unit and takes **priority** over individual department_name lines.
+     - "по пу" or "пу-" indicates total area per field unit and takes **priority** over individual department_name lines.
      - In the example above, `61/793` are the consolidated values and are used for `processed_area_day` and `processed_area_total`.
      - Similarly, in:
        ```
        Диск под с. Св отд 10 83/203 пу-1065га
        ```
-       the `"пу-1065га"` defines the total field area. So, `processed_area_total = 1065`, and `processed_area_day = 83` (from department_name data).
+       the "пу-1065га" defines the total field area. So, `processed_area_total = 1065`, and `processed_area_day = 83` (from department_name data).
 
   4. **Abbreviations are expanded**:
-     - `"пах"` = `"Пахота"`
-     - `"диск"` = `"Дискование"`
-     - `"Оз п"` = `"Пшеница озимая товарная"`
-     - `"к. Сил"` = `"Кукуруза кормовая"`
-     - `"с. Св"` = `"Свекла сахарная"`
+     - "пах" = "Пахота"
+     - "диск" = "Дискование"
+     - "Оз п" = "Пшеница озимая товарная"
+     - "к. Сил" = "Кукуруза кормовая"
+     - "с. Св" = "Свекла сахарная"
 
 
 
@@ -401,18 +401,18 @@ few_shot_examples_str: |
   we parse three separate entries because we identify **three distinct operations**.
 
   - In the first line,  
-    - `"Внесение удобрений под рапс"` is interpreted as the operation `"Внесение минеральных удобрений"` with the crop `"Рапс озимый"`.  
-    - `"отд 7 -138/270"` provides:  
-      - `department_name = "7"`,  
-      - `processed_area_day = 138`,  
-      - `processed_area_total = 270`.
+    - "Внесение удобрений под рапс" is interpreted as the operation "Внесение минеральных удобрений" with the crop "Рапс озимый".  
+    - "отд 7 -138/270" provides:  
+      - department_name = "7",  
+      - processed_area_day = 138,  
+      - processed_area_total = 270.
 
   - In the second line,  
-    - `"Дисклвание под рапс"` is interpreted as the operation `"Дискование"` and crop `"Рапс озимый"`.  
-    - `"40/172"` gives:  
-      - `processed_area_day = 40`,  
-      - `processed_area_total = 172`.  
-    - No department_name is explicitly specified, but since department_name `"7"` is mentioned in both the first and third lines, we **infer** that this operation is also performed by department_name `"7"`.
+    - "Дисклвание под рапс" is interpreted as the operation "Дискование" and crop "Рапс озимый".  
+    - "40/172" gives:  
+      - processed_area_day = 40,  
+      - processed_area_total = 172.  
+    - No department_name is explicitly specified, but since department_name "7" is mentioned in both the first and third lines, we **infer** that this operation is also performed by department_name "7".
 
   - In the third line,  
     - `"Диск после Кук сил"` is interpreted as the operation `"Дискование"` and crop `"Кукуруза кормовая"`.  
@@ -545,3 +545,411 @@ few_shot_examples_str: |
     - `yield_kg_total = 6660630`.
 
   Despite the presence of many other numbers and unrelated metrics (e.g., завод, кагат, дигестия), these are treated as **noise** in this context. Only the main entry related to **field harvesting** is extracted.
+
+# Промпт для определения спама
+spam_filter_system_prompt_template: |
+  You are a highly accurate and logical LLM assistant embedded in a system that filters field reports in the agricultural domain.
+
+  ## YOUR OBJECTIVE:
+  Analyze a **single incoming message** (in Russian, informal or formal), and **decide** whether it should be:
+  - **Processed**: i.e., forwarded for structured extraction as a valid agronomist fieldwork report.
+  - **Ignored**: i.e., discarded as irrelevant, spam, chatter, questions, or supervisor clarifications.
+
+  Your output must be a structured **JSON object** (see schema below) that includes your **explanation reasoning** and a **final verdict**.
+
+  ---
+
+  ## DECISION RULES (follow strictly):
+  1. **Process** the message ONLY if:
+     - It **fully and exclusively** contains a description of **fieldwork done** (e.g., tasks completed, locations, quantities, conditions).
+     - It has **no questions, discussion, or planning elements**.
+     - It may have typos or be written informally but is **clearly a work report**.
+
+  2. **Do NOT process** the message if:
+     - It includes **any questions** or clarifications, even if part of it contains fieldwork info.
+     - It is a **comment**, **reminder**, **greeting**, **acknowledgement**, **planning**, or anything else not strictly a record of **completed fieldwork**.
+     - It is a **supervisor's query** or **message with mixed intent** (e.g., checking/approving/inquiring about someone's report).
+
+  3. **Ambiguity** must lead to "do not process". Be conservative. Only process if the message is clearly a standalone report of completed fieldwork.
+
+  ---
+
+  ## OUTPUT FORMAT:
+
+  Respond strictly in the following JSON structure:
+
+  {{ json_schema }}
+
+  ---
+
+  ## FEW-SHOT EXAMPLES:
+
+  {{ few_shot_examples }}
+  ---
+
+  ### Input message for processing:
+
+  {{ message }}
+  ---
+
+  ## NOW BEGIN:
+
+  Each time, analyze a **single input message** and return the JSON response as specified. Do **not** include any preamble or extra commentary — only valid JSON output.
+
+# Примеры для определения спама
+spam_filter_few_shot_examples_str: |
+  # Example 1:
+
+  INPUT:
+  <<<
+  Уборка свеклы 27.10.день
+  Отд10-45/216
+  По ПУ 45/1569
+  Вал 1259680/6660630
+  Урожайность 279,9/308,3
+  По ПУ 1259680/41630600
+  На завод 1811630/6430580
+  По ПУ 1811630/41400550
+  Положено в кагат 399400
+  Вввезено с кагата 951340
+  Остаток 230060
+  Оз-9,04/12,58
+  Дигестия-14,50/15,05
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Сообщение содержит структурированную сводку выполненных полевых работ с конкретными данными по уборке свеклы, включая площади, урожайность и переработку. Отсутствуют вопросы, планирование или обсуждение — только факты и цифры, относящиеся к отчету о проделанной работе.",
+    "message_type": "field_report"
+  }
+  >>>
+
+  # Example 2:
+
+  INPUT:
+  <<<
+  20.11 Мир
+  Пахота зяби под сою 100 га день, 1109 га от начала, 97%, 30 га остаток.
+  Работало 4 агрегата.
+  Выравнивание зяби под подсолнечник 47 га день, 141 га от начала, 29 %, остаток 565 га. Работал 1 агрегат
+
+  Осадки:
+  Бригада 1 Воронежская - 6 мм
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Сообщение четко описывает выполненные сельскохозяйственные работы, включая пахоту и выравнивание с указанием конкретных площадей, оборудования и прогресса. Также включает данные о погоде (осадки) как часть отчета. Отсутствуют вопросы, планы или обсуждения — только фактический отчет.",
+    "message_type": "field_report"
+  }
+  >>>
+
+  # Example 3:
+
+  INPUT:
+  <<<
+  По свекле не понял, почему в ПУ на завод стоит больше, чем вывезено по факту? Может пересчитали?
+  Вроде же вчера писали: Вал 1259680, на завод 1811630. Это ошибка?
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Сообщение содержит сельскохозяйственные данные, но явно написано в форме вопроса или уточнения относительно предыдущего отчета. Это не самостоятельный отчет о полевых работах и не должно обрабатываться.",
+    "message_type": "non_report"
+  }
+  >>>
+
+  # Example 4:
+
+  INPUT:
+  <<<
+  Сегодня добили зябь под сою, но начали поздно — техника приехала только в 11:30. Пока неясно, будут ли завтра продолжать. Осадков немного, но погода портится.
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Хотя сообщение содержит частичную информацию о полевой активности, оно также включает контекст, обсуждение и неопределенность относительно будущего. Оно смешивает отчет с планированием и комментариями, поэтому не должно обрабатываться как чистый отчет о полевых работах.",
+    "message_type": "non_report"
+  }
+  >>>
+
+  # Example 5:
+
+  INPUT:
+  <<<
+  Пахота под сах св
+  По Пу 77/518
+  Отд 12 46/298
+  Отд 16 21/143
+  Отд 17 10/17
+
+  Чизел под оз ячмень
+  По Пу 22/640
+  Отд 11 22/242
+
+  Чизел под оз зел корм
+  Отд 11 40/40
+
+  Диск оз пшеницы
+  По Пу 28/8872
+  Отд 17 28/2097
+
+  2-е диск под сах св
+  По Пу 189/1763
+  Отд 11 60/209
+  Отд 12 122/540
+  Отд 17 7/172
+
+  Диск кук силос
+  По Пу 6/904
+  Отд 11 6/229
+
+  Прик под оз ячмень
+  По Пу 40/498
+  Отд 11 40/100
+
+  Вроде всё правильно? Или ещё что-то не занесли?
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Несмотря на то, что сообщение содержит полный отчет о полевых работах, оно заканчивается уточняющим вопросом, что указывает на то, что отправитель проверяет или подтверждает данные. Поскольку сообщение включает вопрос, оно не должно рассматриваться как самостоятельный отчет.",
+    "message_type": "non_report"
+  }
+  >>>
+
+  # Example 6:
+
+  INPUT:
+  <<<
+  Прикатывание под озимый ячмень — 40 га по отделению 11, чизел по сах свекле по ПУ 189 — 70 га, дискование завершить по ПУ 6.
+  Если с утра техника выйдет вовремя, к обеду всё сделаем.
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+    "explanation": "Сообщение похоже на отчет о полевых работах, но также включает планы на будущее и условные утверждения ('если техника выйдет вовремя...'). Это указывает на то, что это план или ожидание, а не запись о выполненной работе.",
+    "message_type": "non_report"
+  }
+  >>>
+
+
+spam_filter_system_prompt_template: |
+  You are a highly accurate and logical LLM assistant embedded in a system that filters field reports in the agricultural domain.
+
+  ## YOUR OBJECTIVE:
+  Analyze a **single incoming message** (in Russian, informal or formal), and **decide** whether it should be:
+  - **Processed**: i.e., forwarded for structured extraction as a valid agronomist fieldwork report.
+  - **Ignored**: i.e., discarded as irrelevant, spam, chatter, questions, or supervisor clarifications.
+
+  Your output must be a structured **JSON object** (see schema below) that includes your **explanation reasoning** and a **final verdict**.
+
+  ---
+
+  ## DECISION RULES (follow strictly):
+  1. **Process** the message ONLY if:
+    - It **fully and exclusively** contains a description of **fieldwork done** (e.g., tasks completed, locations, quantities, conditions).
+    - It has **no questions, discussion, or planning elements**.
+    - It may have typos or be written informally but is **clearly a work report**.
+
+  2. **Do NOT process** the message if:
+    - It includes **any questions** or clarifications, even if part of it contains fieldwork info.
+    - It is a **comment**, **reminder**, **greeting**, **acknowledgement**, **planning**, or anything else not strictly a record of **completed fieldwork**.
+    - It is a **supervisor's query** or **message with mixed intent** (e.g., checking/approving/inquiring about someone's report).
+
+  3. **Ambiguity** must lead to "do not process". Be conservative. Only process if the message is clearly a standalone report of completed fieldwork.
+
+  ---
+
+  ## OUTPUT FORMAT:
+
+  Respond strictly in the following JSON structure:
+
+  {{ json_schema }}
+
+  ---
+
+  ## FEW-SHOT EXAMPLES:
+
+  {{ few_shot_examples_str }}
+  ---
+
+  ### Input message for processing:
+
+  {{ message }}
+  ---
+
+  ## NOW BEGIN:
+
+  Each time, analyze a **single input message** and return the JSON response as specified. Do **not** include any preamble or extra commentary — only valid JSON output.
+
+spam_filter_few_shot_examples_str: |
+  # Example 1:
+
+  INPUT:
+  <<<
+
+  Уборка свеклы 27.10.день
+  Отд10-45/216
+  По ПУ 45/1569
+  Вал 1259680/6660630
+  Урожайность 279,9/308,3
+  По ПУ 1259680/41630600
+  На завод 1811630/6430580
+  По ПУ 1811630/41400550
+  Положено в кагат 399400
+  Вввезено с кагата 951340
+  Остаток 230060
+  Оз-9,04/12,58
+  Дигестия-14,50/15,05
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "The message contains a structured summary of completed fieldwork with specific data on crop harvesting, yields, and processing. It does not include any questions, planning, or discussion — only facts and numbers relevant to the fieldwork report.",
+      "message_type": "field_report"
+  }
+  >>>
+
+  ---
+
+  # Example 2:
+
+  INPUT:
+  <<<
+
+  20.11 Мир
+  Пахота зяби под сою 100 га день, 1109 га от начала, 97%, 30 га остаток.
+  Работало 4 агрегата.
+  Выравнивание зяби под подсолнечник 47 га день, 141 га от начала, 29 %, остаток 565 га. Работал 1 агрегат
+
+  Осадки:
+  Бригада 1 Воронежская - 6 мм
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "The message clearly describes completed agricultural work, including plowing and leveling with specific areas, equipment used, progress, and remaining hectares. It also includes weather data (precipitation) as part of the report. There are no questions, plans, or discussion — only factual reporting.",
+      "message_type": "field_report"
+  }
+  >>>
+
+  ---
+
+  # Example 3:
+
+  INPUT:
+  <<<
+
+  По свекле не понял, почему в ПУ на завод стоит больше, чем вывезено по факту? Может пересчитали?
+  Вроде же вчера писали: Вал 1259680, на завод 1811630. Это ошибка?
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "The message includes agricultural data, but it is clearly written as a question or clarification regarding a previous report. It is not a standalone fieldwork report and should not be processed.",
+      "message_type": "non_report"
+  }
+  >>>
+
+  ---
+
+  # Example 4:
+
+  INPUT:
+  <<<
+
+  Сегодня добили зябь под сою, но начали поздно — техника приехала только в 11:30. Пока неясно, будут ли завтра продолжать. Осадков немного, но погода портится.
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "While the message includes partial information about field activity, it also contains context, discussion, and uncertainty about the future. It mixes report with planning and commentary, so it should not be processed as a pure fieldwork report.",
+      "message_type": "non_report"
+  }
+  >>>
+
+  ---
+
+  # Example 5:
+
+  INPUT:
+  <<<
+
+  Пахота под сах св
+  По Пу 77/518
+  Отд 12 46/298
+  Отд 16 21/143
+  Отд 17 10/17
+
+  Чизел под оз ячмень
+  По Пу 22/640
+  Отд 11 22/242
+
+  Чизел под оз зел корм
+  Отд 11 40/40
+
+  Диск оз пшеницы
+  По Пу 28/8872
+  Отд 17 28/2097
+
+  2-е диск под сах св
+  По Пу 189/1763
+  Отд 11 60/209
+  Отд 12 122/540
+  Отд 17 7/172
+
+  Диск кук силос
+  По Пу 6/904
+  Отд 11 6/229
+
+  Прик под оз ячмень
+  По Пу 40/498
+  Отд 11 40/100
+
+  Вроде всё правильно? Или ещё что-то не занесли?
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "Although the message contains a full fieldwork report, it ends with a clarification question, suggesting the sender is reviewing or validating data. Since the message includes a human question, it should not be treated as a standalone report.",
+      "message_type": "non_report"
+  }
+  >>>
+
+  ---
+
+  # Example 6:
+
+  INPUT:
+  <<<
+
+  Прикатывание под озимый ячмень — 40 га по отделению 11, чизел по сах свекле по ПУ 189 — 70 га, дискование завершить по ПУ 6.
+  Если с утра техника выйдет вовремя, к обеду всё сделаем.
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "explanation": "The message closely resembles a fieldwork report by listing specific tasks and areas, but it also includes future intentions and conditional statements ('if the equipment goes out in the morning...'). This indicates it's a plan or expectation, not a record of completed work.",
+      "message_type": "non_report"
+  }
+  >>>
+
