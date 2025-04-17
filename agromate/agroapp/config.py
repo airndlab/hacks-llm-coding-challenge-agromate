@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 
 load_dotenv(getenv("ENV_FILE", ".env"))
 
+
 class Settings(BaseSettings):
     debug: bool
     db_url: str
@@ -20,5 +21,6 @@ class Settings(BaseSettings):
     google_drive_folder_dumped: bool
     team_name: str
     mode: str
+
 
 settings = Settings()
