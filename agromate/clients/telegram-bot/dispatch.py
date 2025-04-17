@@ -4,8 +4,8 @@ from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram.types import Message, ReactionTypeEmoji
 
-from agrobot.app_client import create_message
-from agrobot.models import ChatMessageCreateRequest
+from app_client import create_message
+from models import ChatMessageCreateRequest
 
 logger = logging.getLogger(__name__)
 

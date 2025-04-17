@@ -1,0 +1,9 @@
+[2025-04-17 18:27:41] [INFO] Restarting services...
+ Container agro-db-1  Restarting
+ Container agro-metabase-1  Restarting
+ Container agro-bot-1  Restarting
+ Container agro-app-1  Restarting
+ Container agro-app-1  Started
+ Container agro-bot-1  Started
+ Container agro-db-1  Started
+ Container agro-metabase-1  Started

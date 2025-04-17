@@ -1,0 +1,26 @@
+[2025-04-17 18:27:49] [INFO] Showing errors for all services...
+[2025-04-17 18:27:49] [INFO] Showing errors in logs for app...
+app-1  |     raise ValueError(f"Invalid Google Drive Folder url: {folder_url}")
+app-1  | ValueError: Invalid Google Drive Folder url: your_google_drive_folder_url
+app-1  |     raise ValueError(f"Invalid Google Drive Folder url: {folder_url}")
+app-1  | ValueError: Invalid Google Drive Folder url: your_google_drive_folder_url
+[2025-04-17 18:27:49] [INFO] Showing errors in logs for bot...
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+bot-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+bot-1  |     For further information visit https://errors.pydantic.dev/2.11/v/missing
+[2025-04-17 18:27:49] [INFO] Showing errors in logs for db...
+[2025-04-17 18:27:49] [INFO] Showing errors in logs for metabase...
+metabase-1  | 2025-04-17 18:23:15,408 INFO jdbcjobstore.JobStoreTX :: ClusterManager: detected 2 failed or restarted instances.
+metabase-1  | 2025-04-17 18:23:15,408 INFO jdbcjobstore.JobStoreTX :: ClusterManager: Scanning for instance "62957ad7d9e21744903378276"'s failed in-progress jobs.
+metabase-1  | 2025-04-17 18:23:15,410 INFO jdbcjobstore.JobStoreTX :: ClusterManager: Scanning for instance "62957ad7d9e21744903380330"'s failed in-progress jobs.
+metabase-1  | 2025-04-17 18:23:22,915 INFO jdbcjobstore.JobStoreTX :: ClusterManager: detected 1 failed or restarted instances.
+metabase-1  | 2025-04-17 18:23:22,916 INFO jdbcjobstore.JobStoreTX :: ClusterManager: Scanning for instance "62957ad7d9e21744903382924"'s failed in-progress jobs.

@@ -4,6 +4,6 @@
 data/google-credentails.json
 
 /app/.venv/
-
+venv/
 __pycache__/
 *.pyc
