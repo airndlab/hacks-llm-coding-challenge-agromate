@@ -61,6 +61,7 @@
 | 008 | Разработка | GPT-4 Turbo | Генерация отчётов и интеграция с Google Drive | [Подробнее](./docs/ai-usage/records/008-google-drive-integration-development.md) |
 
 
+
 ## Запуск проекта
 
 *Инструкции по запуску проекта будут добавлены по мере разработки*
