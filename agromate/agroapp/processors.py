@@ -54,7 +54,7 @@ async def process_report(chat_message_id: int):
             departments: list[Department] = (await session.exec(select(Department))).all()
             operations: list[Operation] = (await session.exec(select(Operation))).all()
             crops: list[Crop] = (await session.exec(select(Crop))).all()
-            reports = await solve_reports(
+            created_reports = await solve_reports(
                 message_id=chat_message.id,
                 message_text=chat_message.message_text,
                 message_created_at=chat_message.created_at,
@@ -62,10 +62,21 @@ async def process_report(chat_message_id: int):
                 crops=crops,
                 operations=operations,
             )
-            session.add_all(reports)
+            session.add_all(created_reports)
             chat_message.status = MessageStatus.processed
-            chat_message.status_text = f"Кол-во отчетов: {len(reports)}"
+            chat_message.status_text = f"Кол-во отчетов: {len(created_reports)}"
             if settings.google_drive_folder_dumped:
+                await session.flush()
+                created_ids = [r.id for r in created_reports]
+                reports: list[Report] = (await session.exec(
+                    select(Report)
+                    .options(
+                        selectinload(Report.department),
+                        selectinload(Report.operation),
+                        selectinload(Report.crop)
+                    )
+                    .where(Report.id.in_(created_ids))
+                )).all()
                 dump_report_silently(chat_message, reports)
         except Exception as e:
             chat_message.status = MessageStatus.failed
