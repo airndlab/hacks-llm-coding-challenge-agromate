@@ -1,14 +1,22 @@
 import math
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Optional, Dict, Any, List, Tuple
+from typing import Literal, Optional, Dict, Any, List, Tuple, Union
+
 
 from entities import Department, Operation, Crop
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _match_department_id(name: str, departments: list[Department]) -> int:
     for d in departments:
-        if d.department_number == name or d.subdivision == name or (d.aliases and name in d.aliases.split(",")):
+        if (d.department_number == name or 
+            d.subdivision == name or 
+            d.production_unit == name or  # Добавлено: проверка поля production_unit
+            (d.aliases and name in d.aliases.split(","))):
             return d.id
     raise ValueError(f"Не найдено подразделение: {name}")
 
@@ -107,3 +115,89 @@ def generate_field_work_log_schema(
         )
 
     return FieldWorkLog
+
+# Определение аннотированных типов для режима DEMO
+def create_annotated_field_work_log_schema(
+    department_names: Tuple[str],
+    operations: Tuple[str],
+    crops: Tuple[str],
+):
+    logger.info(f"🏗️ Создание аннотированной схемы для DEMO режима")
+    logger.info(f"   Доступные подразделения: {len(department_names)}")
+    logger.info(f"   Доступные операции: {len(operations)}")
+    logger.info(f"   Доступные культуры: {len(crops)}")
+    
+    # --- Аннотированные типы для department_name ---
+    class DepartmentValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название подразделения")
+
+    class DepartmentPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название подразделения")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class DepartmentRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение подразделения")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    DepartmentNameAnnotated = Union[DepartmentValid, DepartmentPredict, DepartmentRaw]
+
+    # --- Аннотированные типы для operation ---
+    class OperationValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название операции")
+
+    class OperationPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название операции")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class OperationRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение операции")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    OperationAnnotated = Union[OperationValid, OperationPredict, OperationRaw]
+
+    # --- Аннотированные типы для crop ---
+    class CropValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название культуры")
+
+    class CropPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название культуры")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class CropRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение культуры")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    CropAnnotated = Union[CropValid, CropPredict, CropRaw]
+
+    # --- Основная запись ---
+    class FieldWorkEntryAnnotated(BaseModel):
+        date: Optional[str] = Field(
+            None, description="Дата проведения операции (формат: 'мм-дд' или 'гггг-мм-дд')"
+        )
+
+        department_name: DepartmentNameAnnotated = Field(..., description="Название подразделения с аннотацией")
+        operation: OperationAnnotated = Field(..., description="Название операции с аннотацией")
+        crop: CropAnnotated = Field(..., description="Название культуры с аннотацией")
+
+        processed_area_day: int = Field(..., description="Обработанная площадь за день, в гектарах")
+        processed_area_total: int = Field(..., description="Общая обработанная площадь с начала операции, в гектарах")
+        yield_kg_day: Optional[int] = Field(None, description="Валовая продукция за день, в килограммах")
+        yield_kg_total: Optional[int] = Field(None, description="Суммарная валовая продукция с начала операции, в килограммах")
+
+    # --- Список записей ---
+    class FieldWorkLogAnnotated(BaseModel):
+        entries: List[FieldWorkEntryAnnotated] = Field(
+            ..., description="Список записей о полевых операциях с аннотированными полями"
+        )
+
+    logger.info(f"✅ Аннотированная схема для DEMO режима создана успешно")
+    return FieldWorkEntryAnnotated, FieldWorkLogAnnotated

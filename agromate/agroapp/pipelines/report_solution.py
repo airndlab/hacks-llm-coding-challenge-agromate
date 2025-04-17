@@ -2,10 +2,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 import yaml
-from typing import Optional, Union, Dict, Any, List, Literal, Tuple
-from pydantic import BaseModel, Field
 import time
-import json
 
 from .utils import (
     extract_department_names,
@@ -13,6 +10,7 @@ from .utils import (
     _match_department_id,
     _match_crop_id,
     _match_operation_id,
+    create_annotated_field_work_log_schema,
 )
 
 from config import settings
@@ -61,92 +59,6 @@ model = ChatOpenAI(
 )
 logger.info(f"🤖 Инициализирована модель: {llm_config.get('model_name')}")
 
-# Определение аннотированных типов для режима DEMO
-def create_annotated_field_work_log_schema(
-    department_names: Tuple[str],
-    operations: Tuple[str],
-    crops: Tuple[str],
-):
-    logger.info(f"🏗️ Создание аннотированной схемы для DEMO режима")
-    logger.info(f"   Доступные подразделения: {len(department_names)}")
-    logger.info(f"   Доступные операции: {len(operations)}")
-    logger.info(f"   Доступные культуры: {len(crops)}")
-    
-    # --- Аннотированные типы для department_name ---
-    class DepartmentValid(BaseModel):
-        status: Literal['valid']
-        value: str = Field(..., description="Корректное название подразделения")
-
-    class DepartmentPredict(BaseModel):
-        status: Literal['predict']
-        value: str = Field(..., description="Наиболее вероятное название подразделения")
-        explanation: str = Field(..., description="Почему выбрано это значение")
-
-    class DepartmentRaw(BaseModel):
-        status: Literal['raw']
-        value: str = Field(..., description="Произвольное значение подразделения")
-        explanation: str = Field(..., description="Почему сохранено исходное значение")
-
-    DepartmentNameAnnotated = Union[DepartmentValid, DepartmentPredict, DepartmentRaw]
-
-    # --- Аннотированные типы для operation ---
-    class OperationValid(BaseModel):
-        status: Literal['valid']
-        value: str = Field(..., description="Корректное название операции")
-
-    class OperationPredict(BaseModel):
-        status: Literal['predict']
-        value: str = Field(..., description="Наиболее вероятное название операции")
-        explanation: str = Field(..., description="Почему выбрано это значение")
-
-    class OperationRaw(BaseModel):
-        status: Literal['raw']
-        value: str = Field(..., description="Произвольное значение операции")
-        explanation: str = Field(..., description="Почему сохранено исходное значение")
-
-    OperationAnnotated = Union[OperationValid, OperationPredict, OperationRaw]
-
-    # --- Аннотированные типы для crop ---
-    class CropValid(BaseModel):
-        status: Literal['valid']
-        value: str = Field(..., description="Корректное название культуры")
-
-    class CropPredict(BaseModel):
-        status: Literal['predict']
-        value: str = Field(..., description="Наиболее вероятное название культуры")
-        explanation: str = Field(..., description="Почему выбрано это значение")
-
-    class CropRaw(BaseModel):
-        status: Literal['raw']
-        value: str = Field(..., description="Произвольное значение культуры")
-        explanation: str = Field(..., description="Почему сохранено исходное значение")
-
-    CropAnnotated = Union[CropValid, CropPredict, CropRaw]
-
-    # --- Основная запись ---
-    class FieldWorkEntryAnnotated(BaseModel):
-        date: Optional[str] = Field(
-            None, description="Дата проведения операции (формат: 'мм-дд' или 'гггг-мм-дд')"
-        )
-
-        department_name: DepartmentNameAnnotated = Field(..., description="Название подразделения с аннотацией")
-        operation: OperationAnnotated = Field(..., description="Название операции с аннотацией")
-        crop: CropAnnotated = Field(..., description="Название культуры с аннотацией")
-
-        processed_area_day: int = Field(..., description="Обработанная площадь за день, в гектарах")
-        processed_area_total: int = Field(..., description="Общая обработанная площадь с начала операции, в гектарах")
-        yield_kg_day: Optional[int] = Field(None, description="Валовая продукция за день, в килограммах")
-        yield_kg_total: Optional[int] = Field(None, description="Суммарная валовая продукция с начала операции, в килограммах")
-
-    # --- Список записей ---
-    class FieldWorkLogAnnotated(BaseModel):
-        entries: List[FieldWorkEntryAnnotated] = Field(
-            ..., description="Список записей о полевых операциях с аннотированными полями"
-        )
-
-    logger.info(f"✅ Аннотированная схема для DEMO режима создана успешно")
-    return FieldWorkEntryAnnotated, FieldWorkLogAnnotated
-
 
 async def solve_reports(
         message_id: int,
@@ -164,8 +76,11 @@ async def solve_reports(
 
     # Извлекаем имена для Literal-типов
     department_names = extract_department_names(departments)
+    logger.info(f"   Доступные подразделения: {department_names}")
     crop_names = tuple(crop.crop_name for crop in crops)
+    logger.info(f"   Доступные культуры: {crop_names}")
     operation_names = tuple(op.operation_name for op in operations)
+    logger.info(f"   Доступные операции: {operation_names}")
 
     logger.info(f"📊 Доступные сущности в БД:")
     logger.info(f"   Подразделения: {len(departments)} (в ПУ: {len(department_names)})")
