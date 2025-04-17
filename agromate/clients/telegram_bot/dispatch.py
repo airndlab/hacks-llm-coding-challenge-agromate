@@ -19,6 +19,7 @@ async def question_handler(message: Message) -> None:
         message_text = message.text
         logger.info(f"Received message from '{username}':\n{message_text}")
         created_message = await create_message(ChatMessageCreateRequest(
+            username=str(message.from_user.username),
             user_id=str(message.from_user.id),
             chat_id=str(message.chat.id),
             message_id=str(message.message_id),

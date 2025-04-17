@@ -13,6 +13,7 @@ class MessageStatus(str, Enum):
 
 
 class ChatMessageCreateRequest(BaseModel):
+    username: str
     user_id: str
     chat_id: str
     message_id: str
@@ -28,3 +29,8 @@ class ChatMessageReactionRequest(BaseModel):
     chat_id: str
     message_id: str
     status: MessageStatus
+
+class ChatMessageReplyRequest(BaseModel):
+    chat_id: str
+    message_id: str
+    text: str

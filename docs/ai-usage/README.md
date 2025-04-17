@@ -4,7 +4,7 @@
 
 ## Список используемых AI-инструментов
 
-- Cursor IDE
+- [Cursor](https://www.cursor.com/)
 - ChatGPT
 - Claude 3.7 Sonnet
 

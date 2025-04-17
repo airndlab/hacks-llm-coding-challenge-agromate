@@ -10,6 +10,7 @@ class ChatMessage(SQLModel, table=True):
     __tablename__ = "chat_message"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
     user_id: str
     chat_id: str
     message_id: str
@@ -19,6 +20,7 @@ class ChatMessage(SQLModel, table=True):
     status_text: Optional[str] = None
 
     report: List["Report"] = Relationship(back_populates="chat_message")
+
 
 class Department(SQLModel, table=True):
     __tablename__ = "department"
@@ -64,14 +66,22 @@ class Report(SQLModel, table=True):
     operation_id: int = Field(foreign_key="operation.id")
     crop_id: int = Field(foreign_key="crop.id")
 
+    department_raw: Optional[str] = Field(default=None, nullable=True)
+    operation_raw: Optional[str] = Field(default=None, nullable=True)
+    crop_raw: Optional[str] = Field(default=None, nullable=True)
+
+    department_predicted: Optional[str] = Field(default=None, nullable=True)
+    operation_predicted: Optional[str] = Field(default=None, nullable=True)
+    crop_predicted: Optional[str] = Field(default=None, nullable=True)
+
+    note: Optional[str] = Field(default=None, nullable=True)
+
     day_area: float
     cumulative_area: float
-    day_yield: float
-    cumulative_yield: float
+    day_yield: Optional[float] = Field(default=None, nullable=True)
+    cumulative_yield: Optional[float] = Field(default=None, nullable=True)
 
     chat_message: Optional[ChatMessage] = Relationship(back_populates="report")
     department: Optional[Department] = Relationship(back_populates="report")
     operation: Optional[Operation] = Relationship(back_populates="report")
     crop: Optional[Crop] = Relationship(back_populates="report")
-
-
