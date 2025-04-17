@@ -3,13 +3,13 @@ from os import getenv
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-load_dotenv(getenv("ENV_FILE", ".env"))
+load_dotenv(getenv("ENV_FILE", "../../.env"))
 
 class Settings(BaseSettings):
     debug: bool
     db_url: str
     bot_url: str
-    bot_reply_on_failed: bool
+    bot_reply_on_failed: bool = False
     llm_api_base_url: str
     llm_api_key: str
     configs_path: str
@@ -19,5 +19,6 @@ class Settings(BaseSettings):
     google_drive_folder_url: str
     google_drive_folder_dumped: bool
     team_name: str
+    mode: str
 
 settings = Settings()
