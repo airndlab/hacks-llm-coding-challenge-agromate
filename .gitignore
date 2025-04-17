@@ -7,3 +7,5 @@ data/google-credentails.json
 venv/
 __pycache__/
 *.pyc
+
+agromate/data/google-credentails.json
