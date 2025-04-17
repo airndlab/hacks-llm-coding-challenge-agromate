@@ -22,6 +22,8 @@
 
 В процессе разработки активно используются AI Coding Assistant и другие инструменты на базе LLM. Подробная информация о применении этих инструментов доступна в [документации по использованию AI](./docs/ai-usage/README.md).
 
+![Cursor init project](./docs/assets/001-llm-coding-challenge-first-session.gif)
+
 | № | Этап SDLC | Инструмент | Описание | Детали |
 |---|-----------|------------|-----------|--------|
 | 001 | Планирование | Cursor AI | Создание структуры проекта | [Подробнее](./docs/ai-usage/records/001-project-structure.md) |
