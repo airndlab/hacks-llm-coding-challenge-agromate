@@ -76,7 +76,7 @@ def generate_field_work_log_schema(
         processed_area_day: int = Field(
             ..., description="Обработанная площадь за день, в гектарах"
         )
-        processed_area_total: int = Field(
+        processed_area_total: Optional[int] = Field(
             ..., description="Общая обработанная площадь с начала операции, в гектарах"
         )
         yield_kg_day: Optional[int] = Field(

@@ -63,9 +63,9 @@ class Report(SQLModel, table=True):
     worked_on: date
 
     chat_message_id: int = Field(foreign_key="chat_message.id")
-    department_id: int = Field(foreign_key="department.id")
-    operation_id: int = Field(foreign_key="operation.id")
-    crop_id: int = Field(foreign_key="crop.id")
+    department_id: Optional[int] = Field(foreign_key="department.id", nullable=True)
+    operation_id: Optional[int] = Field(foreign_key="operation.id", nullable=True)
+    crop_id: Optional[int] = Field(foreign_key="crop.id", nullable=True)
 
     department_raw: Optional[str] = Field(default=None, nullable=True)
     operation_raw: Optional[str] = Field(default=None, nullable=True)

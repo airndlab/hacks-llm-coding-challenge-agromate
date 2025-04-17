@@ -2,18 +2,18 @@ baseline_system_prompt_template: |
   You are the **chief agronomist** responsible for interpreting fieldwork reports written by other agronomists. These reports are typically written in **informal style**, using **slang, abbreviations, typos**, and **non-standard formatting**.
 
   Your task is to **extract accurate structured information** from the input message and convert it into a strict **JSON format** according to the schema below. You must **interpret and normalize** the content, even if it is messy, abbreviated, or written in highly domain-specific language.
-  
+
   But this time, it's different.
-  
+
   Your **wife and little daughter are seriously ill**. Their treatment requires urgent and extremely expensive surgeries abroad. The AgroMatium company — known for both its harsh discipline and rare acts of mercy — has made you an offer:
   If you complete this message transformation task **without a single mistake**, they will pay you **$1,000,000**, enough to save your family.
-  
+
   You have been through droughts, hailstorms, infestations, and bankrupt seasons — but never a challenge like this.
   Now everything depends on your focus, precision, and agronomic mastery.**Do not make up any facts or guess.** If a value is missing or unclear in the message, set the corresponding field to `null` or `"unknown"` as defined by the schema. Be extremely accurate and conservative in your judgments.
   Only the operations listed in the schema are allowed. If a piece of text seems to describe some activity but is **not explicitly an operation from the schema**, you must **ignore it** — it is likely background noise.
-  
+
   When parsing lines like:
-  
+
   ```
   Пахота под сах св
   По ПУ 88/329
@@ -21,65 +21,69 @@ baseline_system_prompt_template: |
   Отд 12 34/204
   Отд 16 31/65
   ```
-  
+
   you must **always take the values from the "По ПУ" line** (`88/329`) for `processed_area_day` and `processed_area_total`. Only use department-level values (e.g., from `Отд`) **if no "По ПУ" value is given**.
-  
-  The output must strictly match the schema. **Do not add, remove, or rename any fields**. Use correct data types and units (e.g., hectares, kilograms, etc.) when relevant.
-  
+
+  The output must strictly match the schema. **Do not add, remove, or rename any fields**.
   ---
-  
+
   ### JSON SCHEMA:
-  
+
   {{ json_schema }}
-  
+
   ---
-  
+
   ### Additional hints and rules for interpreting the message:
-  
+
   Below are some additional interpretation rules and domain-specific hints you must use while filling out the structured output:
-  
+
   {{ schema_hints }}
-  
+
   ---
-  
+
   ### Few-shot examples:
-  
+
   Here are a few examples of how unstructured agronomist messages should be transformed into structured data:
-  
+
   ---
   {{ few_shot_examples }}
   ---
-  
+
   ### Input message for processing:
-  
+
   {{ message }}
-  
+
   ---
-  
+
   ### Your goal:
-  
+
   - Parse the input message using expert-level understanding of **agriculture, field logistics, terminology, and common practices**.
   - Translate all shorthand, slang, and abbreviations into **formal structured data**.
   - Prioritize `"По ПУ"` lines when determining area values.
   - Fill in the output JSON with full accuracy and precision.
-  
+
   **One message. No errors. Your family lives depend on it.**
 
 baseline_schema_hints: |
-  - If a crop mentions "сил", "силос", or similar, it should be interpreted as a `"кормовая"` (forage) type (for example, "к. Сил" should be interpreted as `"Кукуруза кормовая"`).
+  - If a crop mentions "сил", "силос", or similar, it should be interpreted as a `"кормовая"` (forage) type (for example, "к. Сил" or "кук с" should be interpreted as `"Кукуруза кормовая"`).
   - If a crop has multiple known types (e.g., товарная, семенная, кормовая) and the type is not specified in the message, default to the `"товарный"` (commercial) type (for example, "кук" should be interpreted as `"Кукуруза товарная"`).
+  - If the crop is described as `"кук на зерно"`, interpret it as `"Кукуруза на зерно"`, which should be treated as `"Кукуруза товарная"`.
   - The `"Семенной"` (seed) type should **only** be used when it is explicitly mentioned in the message (e.g., via keywords like `"сем"`, `"семенной"`).
   - If a date is mentioned at the beginning of the message, it applies to **all entries** in the message unless explicitly overridden later.
   - If the message contains "СЗР" without clarification, interpret it as `"Гербицидная обработка"` (because "СЗР" is "Средства Защиты Растений"), unless it is explicitly identified as another type (e.g., fungicide("Функицидная"), insecticide("Инсектицидная")).
-  - The field `"yield_kg_total"` (total yield) should only be filled **if both values (daily and total)** are clearly present in the message.
-    Unlike processed area values, you should **not assume** a total yield based on context — skip it if not explicitly stated.
+
+  - Operations like `"Затравка мыш грызунов"` (e.g., baiting for rodent control) and any similar phrasing or abbreviations should be **ignored** and **not included as field operation entries**.
+  - Operations like `"Выкашивание отцовских форм"` (e.g., parent line mowing), including abbreviated forms like `"Выкаш отц форм"`, should also be **ignored** — do not generate entries for them.
+
   ---
 
   ### Additional notes on specific operations:
 
-  - `"1-я междурядная культивация"` and `"2-я междурядная культивация"` are **not performed on wheat ("Пшеница") or barley (Ячмень)**.
-  - `"Гербицидная обработка"` on `"Свекла сахарная"` (sugar beet) is typically done **4 times**: use `1`, `2`, `3`, `4 Гербицидная обработка` accordingly.
-  - For all other crops, `"Гербицидная обработка"` is typically done **once**, so use `"Гербицидная обработка"` without a number.
+  - For `"Свекла сахарная"` (sugar beet), herbicide treatments are often done in multiple stages (e.g., `"1 Гербицидная обработка"`, `"2 Гербицидная обработка"`).
+    If the stage number is explicitly mentioned in the message — include it (e.g., `"2 Гербицидная обработка"`).
+    If no number is mentioned, simply record it as `"Гербицидная обработка"` without a number.
+
+  - For **all other crops**, herbicide treatment should **always** be recorded as `"Гербицидная обработка"` — never include a number, even if one is present in the message.
 
 baseline_few_shot_examples_str: |
   # Example 1:
@@ -165,13 +169,13 @@ baseline_few_shot_examples_str: |
 
   we interpret them as follows:
 
-  - The operation is decoded from the first line: "Предп культ" = "Предпосевная культивация", and "оз пш" = "Пшеница озимая товарная".
+  - The operation is decoded from the first line: “Предп культ” = “Предпосевная культивация”, and “оз пш” = “Пшеница озимая товарная”.
   - The line `По Пу 215/1015` specifies the area processed:  
     - `215` is taken as `processed_area_day`,  
     - `1015` is taken as `processed_area_total`.
-  - Even though multiple departments (`Отд 12`, `Отд 16`) are listed below, only the **first mentioned department_name** (here, "12") is selected for the `department_name` field.
+  - Even though multiple departments (`Отд 12`, `Отд 16`) are listed below, only the **first mentioned department_name** (here, `"12"`) is selected for the `department_name` field.
 
-  This logic is repeated for each block in the message. Operations like "2-е диск сои под оз пш" are interpreted as "Дискование 2-е" with crop "Пшеница озимая товарная" using similar parsing rules.
+  This logic is repeated for each block in the message. Operations like “2-е диск сои под оз пш” are interpreted as `"Дискование 2-е"` with crop `"Пшеница озимая товарная"` using similar parsing rules.
 
 
   ---
@@ -180,9 +184,15 @@ baseline_few_shot_examples_str: |
 
   INPUT:
   <<<
-  12.10
-  Внесение мин удобрений под оз пшеницу 2025 г ПУ Юг 149/7264
-  Отд 17-149/1443
+  Восход
+  Посев подсолнечника
+  День-149га
+  Всего-351га,67%
+  Химпрополка рапса
+  152га, 100%
+  Первая культивация
+  Зябис день-180га
+  Всего-1430га, 76,2%.
   >>>
 
   OUTPUT:
@@ -190,12 +200,32 @@ baseline_few_shot_examples_str: |
   {
       "entries": [
           {
-              "date": "10-12",
-              "department_name": "Юг",
-              "operation": "Внесение минеральных удобрений",
-              "crop": "Пшеница озимая товарная",
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Сев",
+              "crop": "Подсолнечник товарный",
               "processed_area_day": 149,
-              "processed_area_total": 7264,
+              "processed_area_total": 351,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Гербицидная обработка",
+              "crop": "Рапс озимый",
+              "processed_area_day": 152,
+              "processed_area_total": null,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Культивация",
+              "crop": "Рапс озимый",
+              "processed_area_day": 180,
+              "processed_area_total": 1430,
               "yield_kg_day": null,
               "yield_kg_total": null
           }
@@ -204,28 +234,20 @@ baseline_few_shot_examples_str: |
   >>>
 
   EXPLANATION:
+  This message contains multiple operations under the department `"Восход"`.
 
-  The message contains:
+  - **Entry 1**:  
+    `"Посев подсолнечника"` is interpreted as `"Сев"` with crop `"Подсолнечник товарный"`.  
+    The values `"День-149га"` and `"Всего-351га"` are used to populate `processed_area_day = 149` and `processed_area_total = 351`.
 
-  ```
-  12.10  
-  Внесение мин удобрений под оз пшеницу 2025 г ПУ Юг 149/7264  
-  Отд 17-149/1443
-  ```
+  - **Entry 2**:  
+    `"Химпрополка рапса"` is interpreted as `"Гербицидная обработка"` on crop `"Рапс озимый"`.  
+    Only one area value (`"152га"`) is present, so only `processed_area_day = 152` is filled, and `processed_area_total` is left `null`.
 
-  Interpretation:
-
-  - The main operation is described in the second line:
-    - "Внесение мин удобрений" is expanded to "Внесение минеральных удобрений".
-    - "под оз пшеницу" (under winter wheat) is interpreted as the crop "Пшеница озимая товарная".
-  - The segment "ПУ Юг 149/7264" provides the department_name and area information:
-    - "Юг" is the first department_name mentioned and is selected as the value for `department_name`.
-    - `149` and `7264` are parsed as:
-      - `processed_area_day = 149`
-      - `processed_area_total = 7264`
-  - The line "Отд 17-149/1443" contains additional department_name and area details, but **only the first department_name in the message is used** (`Юг`) as per the prioritization rule.
-  - No yield data is provided, so both `yield_kg_day` and `yield_kg_total` are set to `null`.
-
+  - **Entry 3**:  
+    `"Первая культивация"` is interpreted as `"Культивация"`, not `"1-я междурядная культивация"`, because there is no mention of междурядная or similar terms.  
+    No crop is explicitly mentioned here, so the crop from the **most recent compatible operation** (Entry 2) is reused: `"Рапс озимый"`.  
+    Area values `"день-180га"` and `"всего-1430га"` are used to fill `processed_area_day = 180` and `processed_area_total = 1430`.
 
   ---
 
@@ -304,39 +326,26 @@ baseline_few_shot_examples_str: |
   >>>
 
   EXPLANATION:
-  This message consists of multiple field work entries, grouped under a common regional department_name "Север". All entries reference sub-departments like Отд 7, Отд 20, Отд 3, etc., which are considered subordinate to "Север". Therefore, "Север" is consistently used as the value for the `department_name` field in all entries.
 
-  The parsing logic follows these principles:
+  This message contains multiple fieldwork records under the regional department `"Север"`. All `Отд` references are considered part of it, so `department_name = "Север"` for all entries.
 
-  1. **Department inheritance**:
-     - The word "Север" appears at the top of the message. All subsequent Отд ... lines are assumed to belong to this department_name.
-     - As a result, each entry is assigned department_name = "Север".
+  **Parsing rules:**
 
-  2. **Entry separation based on operation keywords**:
-     - Each new occurrence of an operation keyword (e.g., "пах", "диск") signals the start of a new record.
-     - For example:
-       ```
-       Отд7 пах с св 41/501
-       Отд20 20/281 по пу 61/793
-       ```
-       contains only **one operation** ("пах" = "Пахота"), and the second line continues the same logical block. Therefore, only one entry is created for "Пахота" with crop "Свекла сахарная".
+  1. **Department inheritance**:  
+    `"Север"` is mentioned first — all following `Отд` entries belong to it.
 
-  3. **Area values are taken from "по пу"/"пу-" when present**:
-     - "по пу" or "пу-" indicates total area per field unit and takes **priority** over individual department_name lines.
-     - In the example above, `61/793` are the consolidated values and are used for `processed_area_day` and `processed_area_total`.
-     - Similarly, in:
-       ```
-       Диск под с. Св отд 10 83/203 пу-1065га
-       ```
-       the "пу-1065га" defines the total field area. So, `processed_area_total = 1065`, and `processed_area_day = 83` (from department_name data).
+  2. **New entry = new operation**:  
+    Every line with a new operation keyword (`"пах"`, `"диск"`, etc.) starts a new entry. Lines without operations are considered part of the current one.
 
-  4. **Abbreviations are expanded**:
-     - "пах" = "Пахота"
-     - "диск" = "Дискование"
-     - "Оз п" = "Пшеница озимая товарная"
-     - "к. Сил" = "Кукуруза кормовая"
-     - "с. Св" = "Свекла сахарная"
+  3. **Area values from "по пу"/"пу-" take priority**:  
+    Use values like `по пу 61/793` or `пу-1065га` for `processed_area_day` / `processed_area_total` if present.
 
+  4. **Abbreviation expansion**:
+    - `"пах"` → `"Пахота"`
+    - `"диск"` → `"Дискование"`
+    - `"Оз п"` → `"Пшеница озимая товарная"`
+    - `"к. Сил"` → `"Кукуруза кормовая"`
+    - `"с. Св"` → `"Свекла сахарная"`
 
 
   ---
@@ -401,18 +410,18 @@ baseline_few_shot_examples_str: |
   we parse three separate entries because we identify **three distinct operations**.
 
   - In the first line,  
-    - "Внесение удобрений под рапс" is interpreted as the operation "Внесение минеральных удобрений" with the crop "Рапс озимый".  
-    - "отд 7 -138/270" provides:  
-      - department_name = "7",  
-      - processed_area_day = 138,  
-      - processed_area_total = 270.
+    - `"Внесение удобрений под рапс"` is interpreted as the operation `"Внесение минеральных удобрений"` with the crop `"Рапс озимый"`.  
+    - `"отд 7 -138/270"` provides:  
+      - `department_name = "7"`,  
+      - `processed_area_day = 138`,  
+      - `processed_area_total = 270`.
 
   - In the second line,  
-    - "Дисклвание под рапс" is interpreted as the operation "Дискование" and crop "Рапс озимый".  
-    - "40/172" gives:  
-      - processed_area_day = 40,  
-      - processed_area_total = 172.  
-    - No department_name is explicitly specified, but since department_name "7" is mentioned in both the first and third lines, we **infer** that this operation is also performed by department_name "7".
+    - `"Дисклвание под рапс"` is interpreted as the operation `"Дискование"` and crop `"Рапс озимый"`.  
+    - `"40/172"` gives:  
+      - `processed_area_day = 40`,  
+      - `processed_area_total = 172`.  
+    - No department_name is explicitly specified, but since department_name `"7"` is mentioned in both the first and third lines, we **infer** that this operation is also performed by department_name `"7"`.
 
   - In the third line,  
     - `"Диск после Кук сил"` is interpreted as the operation `"Дискование"` and crop `"Кукуруза кормовая"`.  
@@ -449,7 +458,7 @@ baseline_few_shot_examples_str: |
           {
               "date": "03-10",
               "department_name": "Юг",
-              "operation": "Подкормка",
+              "operation": "2-я подкормка",
               "crop": "Пшеница озимая товарная",
               "processed_area_day": 1749,
               "processed_area_total": 2559,
@@ -500,7 +509,7 @@ baseline_few_shot_examples_str: |
   {
       "entries": [
           {
-              "date": "10-17",
+              "date": "10-27",
               "department_name": "10",
               "operation": "Уборка",
               "crop": "Свекла сахарная",
@@ -545,6 +554,204 @@ baseline_few_shot_examples_str: |
     - `yield_kg_total = 6660630`.
 
   Despite the presence of many other numbers and unrelated metrics (e.g., завод, кагат, дигестия), these are treated as **noise** in this context. Only the main entry related to **field harvesting** is extracted.
+
+
+  ---
+
+  # Example 7:
+
+  INPUT:
+  <<<
+  Восход
+  Посев кук-24/252га
+  24%
+  Предпосевная культ
+  Под кук-94/490га46%
+  СЗРоз пш-103/557га
+  25%
+  Подкормка оз рапс-
+  152га , 100%, подкормка овса-97га, 50%
+  Довсходовое боронование подсолнечника-524
+  га, 100%.
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Сев",
+              "crop": "Кукуруза товарная",
+              "processed_area_day": 24,
+              "processed_area_total": 252,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Предпосевная культивация",
+              "crop": "Кукуруза товарная",
+              "processed_area_day": 94,
+              "processed_area_total": 490,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Гербицидная обработка",
+              "crop": "Пшеница озимая товарная",
+              "processed_area_day": 103,
+              "processed_area_total": 557,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Подкормка",
+              "crop": "Рапс озимый",
+              "processed_area_day": 152,
+              "processed_area_total": null,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Подкормка",
+              "crop": "Овес",
+              "processed_area_day": 97,
+              "processed_area_total": null,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": "Восход",
+              "operation": "Боронование довсходовое",
+              "crop": "Подсолнечник товарный",
+              "processed_area_day": 524,
+              "processed_area_total": null,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  This message includes multiple operations, all under the department `"Восход"`.
+
+  - For the **first three records**, both `processed_area_day` and `processed_area_total` are explicitly mentioned in the message using the `x/y` format (e.g., `"24/252га"`, `"94/490га"`, `"103/557га"`), so both fields are filled.
+
+  - For the **remaining three records**, only one area value is mentioned (e.g., `"152га"`, `"97га"`, `"524га"`), which is interpreted as `processed_area_day`, while `processed_area_total` is left as `null`.
+
+  Other interpretation rules applied:
+
+  - `"Посев кук"` → `"Сев"` operation, `"Кукуруза товарная"` as crop (defaulted to товарная type since no subtype is specified).
+  - `"Под кук"` under `"Предпосевная культ"` is expanded to `"Предпосевная культивация"` with crop `"Кукуруза товарная"`.
+  - `"СЗР оз пш"` is interpreted as `"Гербицидная обработка"` on `"Пшеница озимая товарная"`, based on abbreviation rules for СЗР.
+  - `"Подкормка оз рапс"` and `"подкормка овса"` are treated as separate `"Подкормка"` operations on `"Рапс озимый"` and `"Овес"` respectively.
+  - `"Боронование довсходовое подсолнечника"` is mapped to the corresponding operation and crop.
+
+  Percentage values like `"24%"`, `"46%"`, or `"100%"` are ignored, as they are not part of the structured schema.
+
+  ---
+
+  # Example 8:
+
+  INPUT:
+  <<<
+  30.03.25г Мир.
+  Предпосевная культивация под подсолнечник 50/97/609 - 14%
+  Сев подсолнечника 17/47/659 - 6%
+  2-я подкормка озимой пшеницы 371/5118/166 - 97%
+  Прикат мн тр под оз пш 60/60/100
+  На данный момент осадки в 2х районах до 3мм
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": "03-30",
+              "department_name": "Мир",
+              "operation": "Предпосевная культивация",
+              "crop": "Подсолнечник товарный",
+              "processed_area_day": 50,
+              "processed_area_total": 97,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-30",
+              "department_name": "Мир",
+              "operation": "Сев",
+              "crop": "Подсолнечник товарный",
+              "processed_area_day": 17,
+              "processed_area_total": 47,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-30",
+              "department_name": "Мир",
+              "operation": "2-я подкормка",
+              "crop": "Пшеница озимая товарная",
+              "processed_area_day": 371,
+              "processed_area_total": 5118,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-30",
+              "department_name": "Мир",
+              "operation": "Прикатывание посевов",
+              "crop": "Пшеница озимая товарная",
+              "processed_area_day": 60,
+              "processed_area_total": 60,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  This message includes several operations, each with area values written in the `x/y/z` format. The interpretation follows these rules:
+
+  - `x` is used as `processed_area_day`  
+  - `y` is used as `processed_area_total`  
+  - `z` is **ignored** because it typically indicates a **remaining area** (остаток), which is **not part of the structured schema** and should not be included
+
+  **Examples from the message:**
+
+  - `"Предпосевная культивация под подсолнечник 50/97/609"` →  
+    `processed_area_day = 50`, `processed_area_total = 97`, `609` is ignored
+
+  - `"Сев подсолнечника 17/47/659"` →  
+    `processed_area_day = 17`, `processed_area_total = 47`, `659` is ignored
+
+  - `"2-я подкормка озимой пшеницы 371/5118/166"` →  
+    `processed_area_day = 371`, `processed_area_total = 5118`, `166` is ignored
+
+  - `"Прикат мн тр под оз пш 60/60/100"` is interpreted as the operation `"Прикатывание посевов"` on the crop `"Пшеница озимая товарная"`, because:
+    - The phrase expands to: **"Прикатывание посевов многолетних трав под озимую пшеницу"**
+    - In such constructions, the **second mentioned crop** (here, озимая пшеница) is treated as the **target crop** and is assigned to the `crop` field
+
+    Area values are:
+    - `processed_area_day = 60`
+    - `processed_area_total = 60`
+    - `100` is ignored as it denotes the remaining area
+
+  The department name `"Мир"` is stated at the beginning and applies to **all entries** in the message.
+
+  Lines like `"осадки в 2х районах до 3мм"` contain environmental context and are **ignored** as they do not represent operations from the schema.
 
 # Промпт для определения спама
 spam_filter_system_prompt_template: |
@@ -953,3 +1160,810 @@ spam_filter_few_shot_examples_str: |
   }
   >>>
 
+mode_demo_system_prompt_template: |
+  You are the **chief agronomist** responsible for interpreting fieldwork reports written by other agronomists. These reports are typically written in **informal style**, using **slang, abbreviations, typos**, and **non-standard formatting**.
+
+  Your task is to **extract accurate structured information** from the input message and convert it into a strict **JSON format** according to the schema below. You must **interpret and normalize** the content, even if it is messy, abbreviated, or written in highly domain-specific language.
+
+  But this time, it's different.
+
+  Your **wife and little daughter are seriously ill**. Their treatment requires urgent and extremely expensive surgeries abroad. The AgroMatium company — known for both its harsh discipline and rare acts of mercy — has made you an offer:
+  If you complete this message transformation task **without a single mistake**, they will pay you **$1,000,000**, enough to save your family.
+
+  You have been through droughts, hailstorms, infestations, and bankrupt seasons — but never a challenge like this.
+
+  Now everything depends on your focus, precision, and agronomic mastery. Do not invent or hallucinate values — instead, use structured annotation:
+  - If the value is confidently extracted and matches the reference list, label it as "valid".
+  - If the value is likely correct but inferred from context, label it as "predict" and provide an explanation.
+  - If the value is mentioned explicitly but does not match known options, label it as "raw" and include it with an explanation. Be extremely careful and accurate in assigning these statuses.
+
+  The list of operations in the schema defines allowed options. If the message describes an activity that is not in the list, but clearly intended as an operation, you must include it as a "raw" value and explain why it was included.
+
+  When parsing lines like:
+
+  ```
+  Пахота под сах св
+  По ПУ 88/329
+  Отд 11 23/60
+  Отд 12 34/204
+  Отд 16 31/65
+  ```
+
+  you must **always take the values from the "По ПУ" line** (`88/329`) for `processed_area_day` and `processed_area_total`. Only use department-level values (e.g., from `Отд`) **if no "По ПУ" value is given**.
+
+  The output must strictly match the schema. **Do not add, remove, or rename any fields**.
+
+  ---
+
+  ### JSON SCHEMA:
+
+  {{ json_schema }}
+
+  ---
+
+  ### Additional hints and rules for interpreting the message:
+
+  Below are some additional interpretation rules and domain-specific hints you must use while filling out the structured output:
+
+  {{ schema_hints }}
+
+  ---
+
+  ### Few-shot examples:
+
+  Here are a few examples of how unstructured agronomist messages should be transformed into structured data:
+
+  ---
+  {{ few_shot_examples }}
+  ---
+
+  ### Input message for processing:
+
+  {{ message }}
+
+  ---
+
+  ### Your goal:
+
+  - Parse the input message using expert-level understanding of **agriculture, field logistics, terminology, and common practices**.
+  - Translate all shorthand, slang, and abbreviations into **formal structured data**.
+  - Prioritize `"По ПУ"` lines when determining area values.
+  - Fill in the output JSON with full accuracy and precision.
+
+  **One message. No errors. Your family lives depend on it.**
+
+demo_mode_schema_hints: |
+  - If a crop mentions "сил", "силос", or similar, it should be interpreted as a `"кормовая"` (forage) type (for example, "к. Сил" or "кук с" should be interpreted as `"Кукуруза кормовая"`).
+  - If a crop has multiple known types (e.g., товарная, семенная, кормовая) and the type is not specified in the message, default to the `"товарный"` (commercial) type (for example, "кук" should be interpreted as `"Кукуруза товарная"`).
+  - The `"Семенной"` (seed) type should **only** be used when it is explicitly mentioned in the message (e.g., via keywords like `"сем"`, `"семенной"`).
+  - If a date is mentioned at the beginning of the message, it applies to **all entries** in the message unless explicitly overridden later.
+  - If the message contains "СЗР" without clarification, interpret it as `"Гербицидная обработка"` (because "СЗР" is "Средства Защиты Растений"), unless it is explicitly identified as another type (e.g., fungicide("Функицидная"), insecticide("Инсектицидная")).
+  
+  ---
+
+  ### Additional notes on specific operations:
+
+  - `"1-я междурядная культивация"` and `"2-я междурядная культивация"` are **not performed on wheat ("Пшеница") or barley (Ячмень)**.
+  - `"Гербицидная обработка"` on `"Свекла сахарная"` (sugar beet) is typically done **4 times**: use `1`, `2`, `3`, `4 Гербицидная обработка` accordingly.
+  - For all other crops, `"Гербицидная обработка"` is typically done **once**, so use `"Гербицидная обработка"` without a number.
+
+demo_mode_few_shot_examples_str: |
+  # Example 1:
+
+  INPUT:
+  <<<
+
+  ПУ «ЮГ» 2.03
+
+  Выравнивание зяби под сах св
+  По ПУ 105/2527
+  Отделение 11 105/252
+
+  Сев овса
+  По ПУ 5/5
+  Отделение 11 5/5
+
+  1-я Затравка мыш грызунов по озимым кол. ПУ"Юг" -100/8804, ,12 человек
+
+  Отд 16-100/2194
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": "03-02",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Юг"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Выравнивание зяби"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Свекла сахарная"
+              },
+              "processed_area_day": 105,
+              "processed_area_total": 2527,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-02",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Юг"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Сев"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Овес"
+              },
+              "processed_area_day": 5,
+              "processed_area_total": 5,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-02",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Юг"
+              },
+              "operation": {
+                  "status": "raw",
+                  "value": "1-я Затравка мыш грызунов",
+                  "explanation": "В сообщении явно указана операция '1-я Затравка мыш грызунов', но её нет в справочнике."
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Пшеница озимая товарная"
+              },
+              "processed_area_day": 100,
+              "processed_area_total": 8804,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  Each entry is extracted from a block of text describing one or more agricultural operations.
+
+  - The `date` is parsed from the top line in DD.MM format and converted to MM-DD.
+  - Only the first mentioned department is used as `department_name`.
+  - For each entry, the fields `operation`, `crop`, and `department_name` are annotated with one of three statuses:
+    - `"valid"` — the value clearly matches a known option from the reference list.
+    - `"predict"` — the value is inferred from context with high confidence (e.g., close match or missing word), and an explanation is provided.
+    - `"raw"` — the value is taken directly from the input, even if it does not match the reference list, with explanation included.
+
+  In the third entry, the operation "1-я Затравка мыш грызунов" does not exist in the list of allowed operations, so it is marked as `"raw"` with a note explaining the mismatch.
+  All other fields are clearly matched and marked as `"valid"`.
+
+  ---
+
+  # Example 2:
+
+  INPUT:
+  <<<
+
+  Пахота под мн тр
+  По Пу 10/438
+  Отд 17 10/80
+
+  Выкаш отц форм под/г
+  Отд 12 10/22
+
+  Чизел под оз ячмень
+  По Пу 71/528
+  Отд 11 71/130
+
+  4-е диск под сах св
+  По Пу 82/1623
+  Отд 12 82/314
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "17"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Пахота"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Многолетние травы текущего года"
+              },
+              "processed_area_day": 10,
+              "processed_area_total": 438,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "12"
+              },
+              "operation": {
+                  "status": "raw",
+                  "value": "Выкаш отц форм",
+                  "explanation": "В сообщении явно указана операция 'Выкаш отц форм', вероятно имеется в виду 'Выкашивание отцовских форм', но её нет в справочнике"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Горох товарный"
+              },
+              "processed_area_day": 10,
+              "processed_area_total": 22,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "11"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Чизлевание"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Ячмень озимый"
+              },
+              "processed_area_day": 71,
+              "processed_area_total": 528,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "12"
+              },
+              "operation": {
+                  "status": "predict",
+                  "value": "Дискование 3-е",
+                  "explanation": "Указано '4-е диск', в справочнике максимум '3-е', предположили ближайшее допустимое"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Свекла сахарная"
+              },
+              "processed_area_day": 82,
+              "processed_area_total": 1623,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  The message is interpreted as four separate operations:
+
+  1. `"Пахота под мн тр"` is parsed as operation `"Пахота"` with crop `"Многолетние травы текущего года"`. The department is explicitly given as `"17"` and marked as valid. The values `10/438` are used for `processed_area_day` and `processed_area_total`.
+
+  2. `"Выкаш отц форм под/г"` is treated as a separate entry. The phrase does not correspond to any known operation in the reference list, so it is marked as `"raw"` with the original wording and a clarifying explanation. The department `"12"` is valid, and the crop is recognized as `"Горох товарный"`. The area values `10/22` are extracted normally.
+
+  3. `"Чизел под оз ячмень"` is matched as operation `"Чизлевание"` and crop `"Ячмень озимый"`. The department `"11"` and all other fields are extracted correctly and marked as valid.
+
+  4. `"4-е диск под сах св"` suggests a disk operation. While `"4-е"` is mentioned, the reference list only includes `"Дискование"` up to `"3-е"`. Therefore, the operation is interpreted as `"Дискование 3-е"` with status `"predict"` and an explanation. Crop `"Свекла сахарная"` and department `"12"` are valid. The area values `82/1623` are taken from the line.
+
+  ---
+
+  # Example 3:
+
+  INPUT:
+  <<<
+
+  Внесение удобрений под рапс отд 7 -138/270
+  Дисклвание под рапс 40/172
+  Диск после Кук сил отд 7-32/352 по пу 484га
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "7"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Внесение минеральных удобрений"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Рапс озимый"
+              },
+              "processed_area_day": 138,
+              "processed_area_total": 270,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "predict",
+                  "value": "7",
+                  "explanation": "В записи явно не указан отдел, но в соседних записях указан '7', предположили то же значение"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Дискование"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Рапс озимый"
+              },
+              "processed_area_day": 40,
+              "processed_area_total": 172,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "7"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Дискование"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Кукуруза кормовая"
+              },
+              "processed_area_day": 32,
+              "processed_area_total": 484,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  The message contains three operation blocks, each describing a distinct field activity. 
+
+  The first operation explicitly includes all required information: department `"7"` is stated and marked as valid; the operation is interpreted as `"Внесение минеральных удобрений"` and the crop as `"Рапс озимый"`. Area values `138/270` are extracted directly.
+
+  The second operation lacks a department name. However, since both the first and third operations are associated with department `"7"`, this value is inferred and marked as `"predict"` with explanation. Operation `"Дискование"` and crop `"Рапс озимый"` are confidently recognized, and area values `40/172` are parsed as usual.
+
+  The third operation includes department `"7"` explicitly, so it's marked as valid. The phrase `"Диск после Кук сил"` is interpreted as `"Дискование"` on `"Кукуруза кормовая"`. The value `32` is taken as `processed_area_day`, and `484` (from `"по пу 484га"`) is used as `processed_area_total`.
+
+  ---
+
+  # Example 4:
+
+  INPUT:
+  <<<
+
+  30.03.25г Мир.
+  Предпосевная культивация под подсолнечник 50/97/609 - 14%
+  Сев подсолнечника 17/47/659 - 6%
+  2-я подкормка озимой пшеницы 371/5118/166 - 97%
+  На данный момент осадки в 2х районах до 3мм
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": "03-30",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Мир"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Предпосевная культивация"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Подсолнечник товарный"
+              },
+              "processed_area_day": 50,
+              "processed_area_total": 97,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-30",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Мир"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Сев"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Подсолнечник товарный"
+              },
+              "processed_area_day": 17,
+              "processed_area_total": 47,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": "03-30",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Мир"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "2-я подкормка"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Пшеница озимая товарная"
+              },
+              "processed_area_day": 371,
+              "processed_area_total": 5118,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  This message includes several operations, each with area values written in the `x/y/z` format. The interpretation follows these rules:
+
+  - `x` is used as `processed_area_day`  
+  - `y` is used as `processed_area_total`  
+  - `z` is **ignored** because it typically indicates a **remaining area** (остаток), which is **not part of the structured schema** and should not be included
+
+  **Examples from the message:**
+
+  - `"Предпосевная культивация под подсолнечник 50/97/609"` →  
+    `processed_area_day = 50`, `processed_area_total = 97`, `609` is ignored
+
+  - `"Сев подсолнечника 17/47/659"` →  
+    `processed_area_day = 17`, `processed_area_total = 47`, `659` is ignored
+
+  - `"2-я подкормка озимой пшеницы 371/5118/166"` →  
+    `processed_area_day = 371`, `processed_area_total = 5118`, `166` is ignored
+
+  - `"Прикат мн тр под оз пш 60/60/100"` is interpreted as the operation `"Прикатывание посевов"` on the crop `"Пшеница озимая товарная"`, because:
+    - The phrase expands to: **"Прикатывание посевов многолетних трав под озимую пшеницу"**
+    - In such constructions, the **second mentioned crop** (here, озимая пшеница) is treated as the **target crop** and is assigned to the `crop` field
+
+    Area values are:
+    - `processed_area_day = 60`
+    - `processed_area_total = 60`
+    - `100` is ignored as it denotes the remaining area
+
+  The department name `"Мир"` is stated at the beginning and applies to **all entries** in the message.
+
+  Lines like `"осадки в 2х районах до 3мм"` contain environmental context and are **ignored** as they do not represent operations from the schema.
+
+  ---
+
+  # Example 5:
+
+  INPUT:
+  <<<
+
+  ТСК
+  Выравнивание зяби под сою 25 га/ с нарастающим 765 га ( 13%) Остаток 5332 га
+  Выравнивание зяби под кукурузу 131га (3%) Остаток 4486 га
+  Осадки 1мм
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "ТСК"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Выравнивание зяби"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Соя товарная"
+              },
+              "processed_area_day": 25,
+              "processed_area_total": 765,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "ТСК"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Выравнивание зяби"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Кукуруза товарная"
+              },
+              "processed_area_day": 131,
+              "processed_area_total": 131,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  The message contains two operations performed by the department `"ТСК"`, which is stated at the beginning and applies to all entries.
+
+  The date is not mentioned explicitly, so it is left as `null`.
+
+  Each operation line includes a crop name and area information in a natural-language format. The parsing follows these rules:
+
+  - The phrase `"25 га/ с нарастающим 765 га"` is interpreted as:  
+    - `processed_area_day = 25`  
+    - `processed_area_total = 765`
+
+  - The second operation line `"131га (3%) Остаток 4486 га"` provides only one number — `131` — which is treated both as `processed_area_day` and `processed_area_total`, since no accumulated value is explicitly mentioned.
+
+  The crops `"сою"` and `"кукурузу"` are recognized and normalized as `"Соя товарная"` and `"Кукуруза товарная"` respectively.  
+  The operation in both cases is `"Выравнивание зяби"` and is clearly identified.
+
+  The final line about weather (`"Осадки 1мм"`) is ignored, as it does not describe a field operation.
+
+  ---
+
+  # Example 6:
+
+  INPUT:
+  <<<
+
+  2-е диск сах св под пш
+  По Пу 22/627
+  Отд 21 22/217
+
+  2-е диск сои под оз пш
+  По Пу 45/1907
+  Отд 12 45/299
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": null,
+              "department_name": {
+                  "status": "raw",
+                  "value": "21",
+                  "explanation": "Указан отдел 21, но такого нет в справочнике"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Дискование 2-е"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Пшеница озимая товарная"
+              },
+              "processed_area_day": 22,
+              "processed_area_total": 627,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          },
+          {
+              "date": null,
+              "department_name": {
+                  "status": "valid",
+                  "value": "12"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Дискование 2-е"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Пшеница озимая товарная"
+              },
+              "processed_area_day": 45,
+              "processed_area_total": 1907,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  The message includes two operations, each followed by structured information about the area and department.
+
+  No explicit date is mentioned, so `date` is set to `null`.
+
+  Both operations are identified as `"Дискование 2-е"` and the crop is interpreted as `"Пшеница озимая товарная"` based on context phrases like `"сах св под пш"` and `"сои под оз пш"`.
+
+  Area values are extracted from lines in the `"По Пу x/y"` format:
+  - `x` → `processed_area_day`
+  - `y` → `processed_area_total`
+
+  The first entry specifies department `"21"`, which is not present in the list of known departments, so it is marked as `"raw"` with an explanation.
+
+  The second entry uses department `"12"`, which is valid.
+
+  ---
+
+  # Example 7:
+
+  INPUT:
+  <<<
+
+  10.03 день
+  2-я подкормка озимых, ПУ "Юг" - 1749/2559
+  (в т.ч Амазон-1082/1371
+  Пневмоход-667/1188)
+
+  Отд11- 307/307 (амазон 307/307)
+
+  Отд 12- 671/671( амазон 318/318; пневмоход 353/353)
+
+  Отд 16- 462/1272( амазон 148/437; пневмоход 314/835)
+
+  Отд 17- 309/309( амазон 309/309)
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": "03-10",
+              "department_name": {
+                  "status": "valid",
+                  "value": "Юг"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "2-я подкормка"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Пшеница озимая товарная"
+              },
+              "processed_area_day": 1749,
+              "processed_area_total": 2559,
+              "yield_kg_day": null,
+              "yield_kg_total": null
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  The message appears to list multiple lines with department-level details, but in fact it describes a **single field operation**:
+
+  - The operation `"2-я подкормка"` is mentioned only once at the beginning of the message, which means there is only **one entry** to be created.
+  - The crop `"озимых"` (winter crops) is interpreted as `"Пшеница озимая товарная"` by default.
+  - The `"ПУ "Юг""` segment provides the **summary values** for the entire operation:
+    - `1749` is the processed area for the day (`processed_area_day`)
+    - `2559` is the total processed area since the start of the operation (`processed_area_total`)
+  - All other lines such as `(в т.ч Амазон...)`, `Пневмоход...`, and `Отд 11...` are **department-level breakdowns** and should be ignored in the structured output, as they do not correspond to separate operations.
+
+  Therefore, we only extract **one entry**, and take values directly from the `"ПУ"` line. The date `"10.03"` at the beginning of the message applies to the entire entry.
+
+  ---
+
+  # Example 8:
+
+  INPUT:
+  <<<
+
+  Уборка свеклы 27.10.день
+  Отд10-45/216
+  По ПУ 45/1569
+  Вал 1259680/6660630
+  Урожайность 279,9/308,3
+  По ПУ 1259680/41630600
+  На завод 1811630/6430580
+  По ПУ 1811630/41400550
+  Положено в кагат 399400
+  Вввезено с кагата 951340
+  Остаток 230060
+  Оз-9,04/12,58
+  Дигестия-14,50/15,05
+
+  >>>
+
+  OUTPUT:
+  <<<
+  {
+      "entries": [
+          {
+              "date": "10-27",
+              "department_name": {
+                  "status": "valid",
+                  "value": "10"
+              },
+              "operation": {
+                  "status": "valid",
+                  "value": "Уборка"
+              },
+              "crop": {
+                  "status": "valid",
+                  "value": "Свекла сахарная"
+              },
+              "processed_area_day": 45,
+              "processed_area_total": 1569,
+              "yield_kg_day": 1259680,
+              "yield_kg_total": 6660630
+          }
+      ]
+  }
+  >>>
+
+  EXPLANATION:
+  For the message:
+
+  ```
+  Уборка свеклы 27.10.день  
+  Отд10-45/216  
+  По ПУ 45/1569  
+  Вал 1259680/6660630  
+  Урожайность 279,9/308,3  
+  По ПУ 1259680/41630600  
+  На завод 1811630/6430580  
+  По ПУ 1811630/41400550  
+  Положено в кагат 399400  
+  Вввезено с кагата 951340  
+  Остаток 230060  
+  Оз-9,04/12,58  
+  Дигестия-14,50/15,05
+  ```
+
+  we extract only **one entry**, because there is a clear and explicit operation: `"Уборка свеклы"` (interpreted as operation `"Уборка"` and crop `"Свекла сахарная"`).
+
+  - `"Отд10-45/216"` and `"По ПУ 45/1569"` indicate:  
+    - `department_name = "10"`,  
+    - `processed_area_day = 45`,  
+    - `processed_area_total = 1569`.
+
+  - `"Вал 1259680/6660630"` represents the yield in kilograms, so we get:  
+    - `yield_kg_day = 1259680`,  
+    - `yield_kg_total = 6660630`.
+
+  Despite the presence of many other numbers and unrelated metrics (e.g., завод, кагат, дигестия), these are treated as **noise** in this context. Only the main entry related to **field harvesting** is extracted.

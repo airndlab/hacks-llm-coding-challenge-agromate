@@ -1,9 +1,11 @@
 import os
-
 from datetime import datetime
-
 from pathlib import Path
 import yaml
+from typing import Optional, Union, Dict, Any, List, Literal, Tuple
+from pydantic import BaseModel, Field
+import time
+import json
 
 from .utils import (
     extract_department_names,
@@ -26,6 +28,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Получаем режим работы пайплайна из переменной окружения
+# Возможные значения: AUTO (по умолчанию) или DEMO
+MODE = settings.mode
+logger.info(f"🚀 Запуск пайплайна report_solution в режиме: {MODE}")
+
+# Загружаем конфигурацию
 llm_config_path = os.path.join(settings.configs_path, "llm.yaml")
 prompts_config_path = os.path.join(settings.configs_path, "prompts.yaml")
 
@@ -35,15 +43,109 @@ with open(Path(llm_config_path), mode="r", encoding="utf-8") as f:
 with open(Path(prompts_config_path), mode="r", encoding="utf-8") as f:
     prompts_config = yaml.safe_load(f)
 
-SYSTEM_PROMPT_TEMPLATE = Template(prompts_config.get("baseline_system_prompt_template"))
-schema_hints = prompts_config.get("schema_hints")
-few_shot_examples_str = prompts_config.get("few_shot_examples_str")
+# Шаблоны и подсказки для режима AUTO
+AUTO_SYSTEM_PROMPT_TEMPLATE = Template(prompts_config.get("baseline_system_prompt_template"))
+auto_schema_hints = prompts_config.get("baseline_schema_hints")
+auto_few_shot_examples_str = prompts_config.get("baseline_few_shot_examples_str")
 
+# Шаблоны и подсказки для режима DEMO
+DEMO_SYSTEM_PROMPT_TEMPLATE = Template(prompts_config.get("mode_demo_system_prompt_template", prompts_config.get("baseline_system_prompt_template")))
+demo_schema_hints = prompts_config.get("demo_mode_schema_hints", auto_schema_hints)
+demo_few_shot_examples_str = prompts_config.get("demo_mode_few_shot_examples_str", auto_few_shot_examples_str)
+
+# Инициализируем модель
 model = ChatOpenAI(
     model=llm_config.get("model_name"),
     openai_api_key=settings.llm_api_key,
     openai_api_base=settings.llm_api_base_url,
 )
+logger.info(f"🤖 Инициализирована модель: {llm_config.get('model_name')}")
+
+# Определение аннотированных типов для режима DEMO
+def create_annotated_field_work_log_schema(
+    department_names: Tuple[str],
+    operations: Tuple[str],
+    crops: Tuple[str],
+):
+    logger.info(f"🏗️ Создание аннотированной схемы для DEMO режима")
+    logger.info(f"   Доступные подразделения: {len(department_names)}")
+    logger.info(f"   Доступные операции: {len(operations)}")
+    logger.info(f"   Доступные культуры: {len(crops)}")
+    
+    # --- Аннотированные типы для department_name ---
+    class DepartmentValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название подразделения")
+
+    class DepartmentPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название подразделения")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class DepartmentRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение подразделения")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    DepartmentNameAnnotated = Union[DepartmentValid, DepartmentPredict, DepartmentRaw]
+
+    # --- Аннотированные типы для operation ---
+    class OperationValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название операции")
+
+    class OperationPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название операции")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class OperationRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение операции")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    OperationAnnotated = Union[OperationValid, OperationPredict, OperationRaw]
+
+    # --- Аннотированные типы для crop ---
+    class CropValid(BaseModel):
+        status: Literal['valid']
+        value: str = Field(..., description="Корректное название культуры")
+
+    class CropPredict(BaseModel):
+        status: Literal['predict']
+        value: str = Field(..., description="Наиболее вероятное название культуры")
+        explanation: str = Field(..., description="Почему выбрано это значение")
+
+    class CropRaw(BaseModel):
+        status: Literal['raw']
+        value: str = Field(..., description="Произвольное значение культуры")
+        explanation: str = Field(..., description="Почему сохранено исходное значение")
+
+    CropAnnotated = Union[CropValid, CropPredict, CropRaw]
+
+    # --- Основная запись ---
+    class FieldWorkEntryAnnotated(BaseModel):
+        date: Optional[str] = Field(
+            None, description="Дата проведения операции (формат: 'мм-дд' или 'гггг-мм-дд')"
+        )
+
+        department_name: DepartmentNameAnnotated = Field(..., description="Название подразделения с аннотацией")
+        operation: OperationAnnotated = Field(..., description="Название операции с аннотацией")
+        crop: CropAnnotated = Field(..., description="Название культуры с аннотацией")
+
+        processed_area_day: int = Field(..., description="Обработанная площадь за день, в гектарах")
+        processed_area_total: int = Field(..., description="Общая обработанная площадь с начала операции, в гектарах")
+        yield_kg_day: Optional[int] = Field(None, description="Валовая продукция за день, в килограммах")
+        yield_kg_total: Optional[int] = Field(None, description="Суммарная валовая продукция с начала операции, в килограммах")
+
+    # --- Список записей ---
+    class FieldWorkLogAnnotated(BaseModel):
+        entries: List[FieldWorkEntryAnnotated] = Field(
+            ..., description="Список записей о полевых операциях с аннотированными полями"
+        )
+
+    logger.info(f"✅ Аннотированная схема для DEMO режима создана успешно")
+    return FieldWorkEntryAnnotated, FieldWorkLogAnnotated
 
 
 async def solve_reports(
@@ -54,50 +156,288 @@ async def solve_reports(
         crops: list[Crop],
         operations: list[Operation],
 ) -> list[Report]:
+    start_time = time.time()
+    logger.info(f"⏳ Начинается обработка сообщения ID: {message_id}")
+    logger.info(f"   Длина текста: {len(message_text)} символов")
+    logger.info(f"   Первые 100 символов: {message_text[:100].replace(chr(10), ' ')}...")
+    logger.info(f"   Дата создания: {message_created_at}")
 
     # Извлекаем имена для Literal-типов
     department_names = extract_department_names(departments)
     crop_names = tuple(crop.crop_name for crop in crops)
     operation_names = tuple(op.operation_name for op in operations)
 
-    # Генерируем Pydantic-схему
-    FieldWorkLog = generate_field_work_log_schema(
-        department_names=department_names,
-        operations=operation_names,
-        crops=crop_names,
-    )
+    logger.info(f"📊 Доступные сущности в БД:")
+    logger.info(f"   Подразделения: {len(departments)} (в ПУ: {len(department_names)})")
+    logger.info(f"   Культуры: {len(crops)}")
+    logger.info(f"   Операции: {len(operations)}")
 
-    logger.info(f"Текущая схема для Structured Output : {FieldWorkLog.model_json_schema()}")
+    # Подготовка данных в зависимости от выбранного режима
+    if MODE == "DEMO":
+        logger.info(f"🔄 Используется режим DEMO с аннотированными полями")
+        try:
+            # Генерируем схему с аннотированными полями для режима DEMO
+            FieldWorkEntryAnnotated, FieldWorkLogAnnotated = create_annotated_field_work_log_schema(
+                department_names=department_names,
+                operations=operation_names,
+                crops=crop_names,
+            )
+            
+            # Создаем промпт для режима DEMO
+            system_prompt = DEMO_SYSTEM_PROMPT_TEMPLATE.render(
+                json_schema=FieldWorkLogAnnotated.model_json_schema(),
+                few_shot_examples=demo_few_shot_examples_str,
+                message=message_text,
+                schema_hints=demo_schema_hints,
+            )
+            
+            logger.info(f"🔍 Генерация промпта завершена. Длина: {len(system_prompt)} символов")
+            
+            # Выполняем запрос к модели
+            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('model_name')}")
+            model_start_time = time.time()
+            field_work_log = await model.with_structured_output(FieldWorkLogAnnotated).ainvoke(
+                [SystemMessage(content=system_prompt)]
+            )
+            model_end_time = time.time()
+            logger.info(f"✅ Ответ от модели получен. Время выполнения: {model_end_time - model_start_time:.2f} сек.")
+            logger.info(f"📝 Выделено записей: {len(field_work_log.entries)}")
+            
+            # Добавляем детальное логирование выделенных записей
+            for i, entry in enumerate(field_work_log.entries):
+                logger.info(f"  📄 Запись #{i+1}:")
+                
+                dept_status = entry.department_name.status
+                dept_value = entry.department_name.value
+                logger.info(f"    🏢 Подразделение: [{dept_status}] {dept_value}")
+                if dept_status != 'valid':
+                    if hasattr(entry.department_name, 'explanation'):
+                        logger.info(f"       📝 Объяснение: {entry.department_name.explanation}")
+                
+                op_status = entry.operation.status
+                op_value = entry.operation.value
+                logger.info(f"    🔨 Операция: [{op_status}] {op_value}")
+                if op_status != 'valid':
+                    if hasattr(entry.operation, 'explanation'):
+                        logger.info(f"       📝 Объяснение: {entry.operation.explanation}")
+                
+                crop_status = entry.crop.status
+                crop_value = entry.crop.value
+                logger.info(f"    🌱 Культура: [{crop_status}] {crop_value}")
+                if crop_status != 'valid':
+                    if hasattr(entry.crop, 'explanation'):
+                        logger.info(f"       📝 Объяснение: {entry.crop.explanation}")
+                
+                logger.info(f"    📊 Площадь день/всего: {entry.processed_area_day}/{entry.processed_area_total} га")
+                if entry.yield_kg_day or entry.yield_kg_total:
+                    logger.info(f"    📈 Урожай день/всего: {entry.yield_kg_day or 'Нет'}/{entry.yield_kg_total or 'Нет'} кг")
+            
+            # Обрабатываем результат
+            reports = []
+            for entry in field_work_log.entries:
+                # Получаем значения и обрабатываем аннотации
+                department_id = None
+                department_raw = None
+                department_predicted = None
+                
+                if entry.department_name.status == 'valid':
+                    try:
+                        department_id = _match_department_id(entry.department_name.value, departments)
+                        logger.info(f"   💼 Подразделение '{entry.department_name.value}' определено как valid, ID: {department_id}")
+                    except ValueError as e:
+                        # Если не найдено соответствие, обрабатываем как raw
+                        logger.warning(f"   ⚠️ Подразделение '{entry.department_name.value}' помечено как valid, но не найдено в БД")
+                        department_raw = entry.department_name.value
+                        department_predicted = f"Не найдено в БД: {str(e)}"
+                elif entry.department_name.status == 'predict':
+                    department_raw = None
+                    department_predicted = entry.department_name.explanation
+                    logger.info(f"   🔍 Подразделение '{entry.department_name.value}' определено как predict: {department_predicted}")
+                else:  # 'raw'
+                    department_raw = entry.department_name.value
+                    department_predicted = entry.department_name.explanation
+                    logger.info(f"   ⚠️ Подразделение '{department_raw}' определено как raw с объяснением: {department_predicted}")
+                
+                operation_id = None
+                operation_raw = None
+                operation_predicted = None
+                
+                if entry.operation.status == 'valid':
+                    try:
+                        operation_id = _match_operation_id(entry.operation.value, operations)
+                        logger.info(f"   💼 Операция '{entry.operation.value}' определена как valid, ID: {operation_id}")
+                    except ValueError as e:
+                        # Если не найдено соответствие, обрабатываем как raw
+                        logger.warning(f"   ⚠️ Операция '{entry.operation.value}' помечена как valid, но не найдена в БД")
+                        operation_raw = entry.operation.value
+                        operation_predicted = f"Не найдено в БД: {str(e)}"
+                elif entry.operation.status == 'predict':
+                    operation_raw = None
+                    operation_predicted = entry.operation.explanation
+                    logger.info(f"   🔍 Операция '{entry.operation.value}' определена как predict: {operation_predicted}")
+                else:  # 'raw'
+                    operation_raw = entry.operation.value
+                    operation_predicted = entry.operation.explanation
+                    logger.info(f"   ⚠️ Операция '{operation_raw}' определена как raw с объяснением: {operation_predicted}")
+                
+                crop_id = None
+                crop_raw = None
+                crop_predicted = None
+                
+                if entry.crop.status == 'valid':
+                    try:
+                        crop_id = _match_crop_id(entry.crop.value, crops)
+                        logger.info(f"   💼 Культура '{entry.crop.value}' определена как valid, ID: {crop_id}")
+                    except ValueError as e:
+                        # Если не найдено соответствие, обрабатываем как raw
+                        logger.warning(f"   ⚠️ Культура '{entry.crop.value}' помечена как valid, но не найдена в БД")
+                        crop_raw = entry.crop.value
+                        crop_predicted = f"Не найдено в БД: {str(e)}"
+                elif entry.crop.status == 'predict':
+                    crop_raw = None
+                    crop_predicted = entry.crop.explanation
+                    logger.info(f"   🔍 Культура '{entry.crop.value}' определена как predict: {crop_predicted}")
+                else:  # 'raw'
+                    crop_raw = entry.crop.value
+                    crop_predicted = entry.crop.explanation
+                    logger.info(f"   ⚠️ Культура '{crop_raw}' определена как raw с объяснением: {crop_predicted}")
+                
+                # Проверяем, что хотя бы один из ID не None
+                if department_id is None and operation_id is None and crop_id is None:
+                    logger.warning(f"   ⚠️ Ни одно поле не имеет валидного ID, используем заглушки из первых записей")
+                    # Используем первые записи в качестве заглушек, если ни один ID не найден
+                    if not department_id and departments:
+                        department_id = departments[0].id
+                        logger.info(f"   🔧 Установлена заглушка для department_id: {department_id}")
+                    if not operation_id and operations:
+                        operation_id = operations[0].id
+                        logger.info(f"   🔧 Установлена заглушка для operation_id: {operation_id}")
+                    if not crop_id and crops:
+                        crop_id = crops[0].id
+                        logger.info(f"   🔧 Установлена заглушка для crop_id: {crop_id}")
+                
+                # Преобразование килограммов в центнеры (делим на 100)
+                day_yield = None
+                cumulative_yield = None
+                
+                if entry.yield_kg_day is not None:
+                    day_yield = entry.yield_kg_day / 100
+                    logger.info(f"   📊 Конвертация день, кг -> цн: {entry.yield_kg_day} -> {day_yield}")
+                    
+                if entry.yield_kg_total is not None:
+                    cumulative_yield = entry.yield_kg_total / 100
+                    logger.info(f"   📊 Конвертация всего, кг -> цн: {entry.yield_kg_total} -> {cumulative_yield}")
+                
+                # Создаем объект Report с учетом аннотаций
+                report = Report(
+                    worked_on=message_created_at.date(),
+                    chat_message_id=message_id,
+                    department_id=department_id,
+                    operation_id=operation_id,
+                    crop_id=crop_id,
+                    department_raw=department_raw,
+                    operation_raw=operation_raw,
+                    crop_raw=crop_raw,
+                    department_predicted=department_predicted,
+                    operation_predicted=operation_predicted,
+                    crop_predicted=crop_predicted,
+                    day_area=entry.processed_area_day,
+                    cumulative_area=entry.processed_area_total,
+                    day_yield=day_yield,
+                    cumulative_yield=cumulative_yield,
+                )
+                logger.info(f"   ✅ Объект Report создан")
+                reports.append(report)
+                
+            logger.info(f"   ✅ Создано записей Report: {len(reports)}")
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка в режиме DEMO: {e}", exc_info=True)
+            raise
+    else:
+        # Стандартный режим AUTO
+        logger.info(f"🔄 Используется стандартный режим AUTO")
+        try:
+            # Генерируем стандартную Pydantic-схему
+            FieldWorkLog = generate_field_work_log_schema(
+                department_names=department_names,
+                operations=operation_names,
+                crops=crop_names,
+            )
+            
+            # Создаем промпт для режима AUTO
+            system_prompt = AUTO_SYSTEM_PROMPT_TEMPLATE.render(
+                json_schema=FieldWorkLog.model_json_schema(),
+                few_shot_examples=auto_few_shot_examples_str,
+                message=message_text,
+                schema_hints=auto_schema_hints,
+            )
+            
+            logger.info(f"🔍 Генерация промпта завершена. Длина: {len(system_prompt)} символов")
+            
+            # Выполняем запрос к модели
+            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('model_name')}")
+            model_start_time = time.time()
+            field_work_log = await model.with_structured_output(FieldWorkLog).ainvoke(
+                [SystemMessage(content=system_prompt)]
+            )
+            model_end_time = time.time()
+            logger.info(f"✅ Ответ от модели получен. Время выполнения: {model_end_time - model_start_time:.2f} сек.")
+            logger.info(f"📝 Выделено записей: {len(field_work_log.entries)}")
+            
+            # Добавляем детальное логирование выделенных записей
+            for i, entry in enumerate(field_work_log.entries):
+                logger.info(f"  📄 Запись #{i+1}:")
+                logger.info(f"    🏢 Подразделение: {entry.department_name}")
+                logger.info(f"    🔨 Операция: {entry.operation}")
+                logger.info(f"    🌱 Культура: {entry.crop}")
+                logger.info(f"    📊 Площадь день/всего: {entry.processed_area_day}/{entry.processed_area_total} га")
+                if entry.yield_kg_day or entry.yield_kg_total:
+                    logger.info(f"    📈 Урожай день/всего: {entry.yield_kg_day or 'Нет'}/{entry.yield_kg_total or 'Нет'} кг")
+            
+            # Обрабатываем результат
+            reports = []
+            for entry in field_work_log.entries:
+                department_id = _match_department_id(entry.department_name, departments)
+                operation_id = _match_operation_id(entry.operation, operations)
+                crop_id = _match_crop_id(entry.crop, crops)
+                
+                logger.info(f"   🔍 Сопоставление: {entry.department_name} -> ID: {department_id}")
+                logger.info(f"   🔍 Сопоставление: {entry.operation} -> ID: {operation_id}")
+                logger.info(f"   🔍 Сопоставление: {entry.crop} -> ID: {crop_id}")
+                
+                # Преобразование килограммов в центнеры (делим на 100)
+                day_yield = None
+                cumulative_yield = None
+                
+                if entry.yield_kg_day is not None:
+                    day_yield = entry.yield_kg_day / 100
+                    logger.info(f"   📊 Конвертация день, кг -> цн: {entry.yield_kg_day} -> {day_yield}")
+                    
+                if entry.yield_kg_total is not None:
+                    cumulative_yield = entry.yield_kg_total / 100
+                    logger.info(f"   📊 Конвертация всего, кг -> цн: {entry.yield_kg_total} -> {cumulative_yield}")
+                
+                report = Report(
+                    worked_on=message_created_at.date(),
+                    chat_message_id=message_id,
+                    department_id=department_id,
+                    operation_id=operation_id,
+                    crop_id=crop_id,
+                    day_area=entry.processed_area_day,
+                    cumulative_area=entry.processed_area_total,
+                    day_yield=day_yield,
+                    cumulative_yield=cumulative_yield,
+                )
+                logger.info(f"   ✅ Объект Report создан с ID: {report.id}")
+                reports.append(report)
+                
+            logger.info(f"   ✅ Создано записей Report: {len(reports)}")
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка в режиме AUTO: {e}", exc_info=True)
+            raise
 
-    system_prompt = SYSTEM_PROMPT_TEMPLATE.render(
-        json_schema=FieldWorkLog.model_json_schema(),
-        few_shot_examples=few_shot_examples_str,
-        message=message_text,
-        schema_hints=schema_hints,
-    )
-
-    field_work_log: FieldWorkLog = await model.with_structured_output(FieldWorkLog).ainvoke(
-        [SystemMessage(content=system_prompt)]
-    )
-
-    reports: list[Report] = []
-
-    for entry in field_work_log.entries:
-        department_id = _match_department_id(entry.department_name, departments)
-        operation_id = _match_operation_id(entry.operation, operations)
-        crop_id = _match_crop_id(entry.crop, crops)
-
-        report = Report(
-            worked_on=message_created_at.date(),
-            chat_message_id=message_id,
-            department_id=department_id,
-            operation_id=operation_id,
-            crop_id=crop_id,
-            day_area=entry.processed_area_day,
-            cumulative_area=entry.processed_area_total,
-            day_yield=entry.yield_kg_day,
-            cumulative_yield=entry.yield_kg_total,
-        )
-        reports.append(report)
-
+    end_time = time.time()
+    logger.info(f"⏱️ Общее время обработки: {end_time - start_time:.2f} сек.")
     return reports
