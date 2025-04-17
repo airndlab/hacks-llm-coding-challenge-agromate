@@ -35,7 +35,30 @@
 ## Архитектура
 
 
+
+
 ## Стек технологий
+
+- **Языки программирования**: Python 3.11+
+- **Фреймворки и библиотеки**:
+  - FastAPI - для создания API и основного сервиса
+  - SQLModel/SQLAlchemy - ORM для работы с базой данных
+  - Pydantic - для валидации данных
+  - aiogram - для реализации Telegram-бота
+  - python-dotenv - для управления переменными окружения
+- **Базы данных**:
+  - PostgreSQL 17 - основная база данных
+- **Инфраструктура**:
+  - Docker и Docker Compose - для контейнеризации и оркестрации
+  - Metabase - для визуализации и аналитики данных
+- **Интеграции**:
+  - Google Drive API - для экспорта отчетов
+- **LLM и AI**:
+  - Интеграция с LLM API для обработки и структурирования сообщений
+- **Инструменты разработки**:
+  - Poetry - управление зависимостями
+  - Cursor AI, ChatGPT, Claude - AI-ассистенты для разработки
+
 
 ## Документация
 
@@ -59,6 +82,8 @@
 | 006 | Разработка | GPT-4 | Генерация Dockerfile | [Подробнее](./docs/ai-usage/records/006-app-architecture-and-implementation.md) |
 | 007 | DevOps | GPT-4 Turbo | Генерация docker-compose | [Подробнее](./docs/ai-usage/records/007-devops-gpt.md) |
 | 008 | Разработка | GPT-4 Turbo | Генерация отчётов и интеграция с Google Drive | [Подробнее](./docs/ai-usage/records/008-google-drive-integration-development.md) |
+| 009 | Реализация | Warp AI | AI-ассистированные операции в терминале | [Подробнее](./docs/ai-usage/records/009-warp-ai-terminal-usage.md) |
+| 010 | Разработка | GPT-4 | Извлечение структурированной информации из сообщений | [Подробнее](./docs/ai-usage/records/010-llm-prompt-generation.md) |
 
 
 ## Запуск проекта
