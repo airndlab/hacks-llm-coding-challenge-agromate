@@ -1,7 +1,7 @@
 import aiohttp
 
-from agrobot.config import settings
-from agrobot.models import ChatMessageCreateRequest, ChatMessageCreateResponse
+from config import settings
+from models import ChatMessageCreateRequest, ChatMessageCreateResponse
 
 
 async def create_message(payload: ChatMessageCreateRequest) -> ChatMessageCreateResponse:

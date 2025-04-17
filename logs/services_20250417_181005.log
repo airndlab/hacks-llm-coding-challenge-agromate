@@ -1,0 +1,98 @@
+[2025-04-17 18:10:05] [INFO] Building and starting services...
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [app internal] load build definition from Dockerfile.app
+#1 transferring dockerfile: 528B done
+#1 DONE 0.0s
+
+#2 [bot internal] load build definition from Dockerfile.bot
+#2 transferring dockerfile: 368B done
+#2 DONE 0.0s
+
+#3 [app internal] load metadata for docker.io/library/python:3.11-slim
+#3 DONE 1.8s
+
+#4 [app internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [bot internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [app 1/5] FROM docker.io/library/python:3.11-slim@sha256:82c07f2f6e35255b92eb16f38dbd22679d5e8fb523064138d7c6468e7bf0c15b
+#6 DONE 0.0s
+
+#7 [bot internal] load build context
+#7 transferring context: 7.11kB done
+#7 DONE 0.0s
+
+#8 [app internal] load build context
+#8 transferring context: 38.86kB done
+#8 DONE 0.0s
+
+#9 [bot 3/5] COPY clients/telegram-bot/requirements.txt .
+#9 CACHED
+
+#10 [bot 4/5] RUN pip install --no-cache-dir -r requirements.txt
+#10 CACHED
+
+#11 [bot 5/5] COPY clients/telegram-bot/*.py ./
+#11 CACHED
+
+#12 [app 5/6] COPY agroapp/*.py agroapp/__init__.py ./
+#12 CACHED
+
+#13 [app 2/5] WORKDIR /app
+#13 CACHED
+
+#14 [app 3/6] COPY agroapp/requirements.txt .
+#14 CACHED
+
+#15 [app 4/6] RUN pip install --no-cache-dir -r requirements.txt &&     pip install --no-cache-dir sqlmodel aiosqlite
+#15 CACHED
+
+#16 [app 6/6] COPY agroapp/pipelines ./pipelines/
+#16 CACHED
+
+#17 [bot] exporting to image
+#17 exporting layers done
+#17 writing image sha256:2c2b894b666b54a2ee1c4869f57eeab73ff1a5a6153ed463931b4c3c8d21e2ed done
+#17 naming to docker.io/library/agromate:bot done
+#17 DONE 0.0s
+
+#18 [app] exporting to image
+#18 exporting layers done
+#18 writing image sha256:778f1c2abb70f21a405e400c259e98752b118c59ecc1972cb61aef320b9c0294 done
+#18 naming to docker.io/library/agromate:app done
+#18 DONE 0.0s
+
+#19 [bot] resolving provenance for metadata file
+#19 DONE 0.0s
+
+#20 [app] resolving provenance for metadata file
+#20 DONE 0.0s
+ app  Built
+ bot  Built
+ Network agro_default  Creating
+ Network agro_default  Created
+ Container agro-metabase-1  Creating
+ Container agro-app-1  Creating
+ Container agro-db-1  Creating
+ Container agro-bot-1  Creating
+ Container agro-app-1  Created
+ metabase The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested 
+ Container agro-metabase-1  Created
+ Container agro-bot-1  Created
+ Container agro-db-1  Created
+ Container agro-app-1  Starting
+ Container agro-bot-1  Starting
+ Container agro-db-1  Starting
+ Container agro-metabase-1  Starting
+ Container agro-bot-1  Started
+ Container agro-app-1  Started
+ Container agro-db-1  Started
+ Container agro-metabase-1  Started
+[2025-04-17 18:10:07] [INFO] [0;32mServices built and started successfully[0m
