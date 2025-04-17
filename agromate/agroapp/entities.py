@@ -1,4 +1,4 @@
-from datetime import date, datetime, UTC
+from datetime import date, datetime
 from typing import Optional, List
 
 from sqlmodel import Field, SQLModel, Relationship
@@ -15,7 +15,7 @@ class ChatMessage(SQLModel, table=True):
     user_id: str
     chat_id: str
     message_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(datetime.UTC))
     message_text: str
     status: MessageStatus = Field(default=MessageStatus.new)
     status_text: Optional[str] = None
