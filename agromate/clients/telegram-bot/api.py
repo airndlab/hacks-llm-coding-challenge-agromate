@@ -4,9 +4,9 @@ import uvicorn
 from aiogram.types import ReactionTypeEmoji
 from fastapi import FastAPI, HTTPException
 
-from agrobot.bot import bot_client
-from agrobot.config import settings
-from agrobot.models import ChatMessageReactionRequest, MessageStatus, ChatMessageReplyRequest
+from bot import bot_client
+from config import settings
+from models import ChatMessageReactionRequest, MessageStatus, ChatMessageReplyRequest
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ async def reply_on_message(request: ChatMessageReplyRequest):
         )
         logger.info(f"Replied on message '{request.chat_id}:{request.message_id}' with text: {request.text}")
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
@@ -61,11 +61,11 @@ async def set_reaction_on_status(request: ChatMessageReactionRequest):
         )
         logger.info(f"Set reaction on status '{request.status}' for message: {request.chat_id}:{request.message_id}")
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 async def start_api():
-    config = uvicorn.Config("agrobot.api:app", host="0.0.0.0", port=8088, loop="asyncio")
+    config = uvicorn.Config("api:app", host="0.0.0.0", port=8088, loop="asyncio")
     server = uvicorn.Server(config)
     await server.serve()

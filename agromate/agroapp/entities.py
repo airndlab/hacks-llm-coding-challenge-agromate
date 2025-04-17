@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from sqlmodel import Field, SQLModel, Relationship
 
-from agroapp.models import MessageStatus
+from models import MessageStatus
 
 
 class ChatMessage(SQLModel, table=True):

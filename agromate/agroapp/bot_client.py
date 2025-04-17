@@ -1,7 +1,7 @@
 import aiohttp
 
-from agroapp.config import settings
-from agroapp.models import ChatMessageReactionRequest, ChatMessageReplyRequest
+from config import settings
+from models import ChatMessageReactionRequest, ChatMessageReplyRequest
 
 
 async def reply_on_message(payload: ChatMessageReplyRequest):

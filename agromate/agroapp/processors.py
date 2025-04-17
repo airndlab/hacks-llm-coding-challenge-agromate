@@ -4,16 +4,16 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from agroapp.bot_client import send_reactions, reply_on_message
-from agroapp.config import settings
-from agroapp.database import async_session
-from agroapp.dump import dump_message_silently, dump_report_silently
-from agroapp.entities import ChatMessage, MessageStatus, Department, Operation, Crop, Report
-from agroapp.google_drive import upload_excel_file_to_folder
-from agroapp.models import ChatMessageReactionRequest, MessageType, ChatMessageReplyRequest
-from agroapp.pipelines.message_definition import define_message_type
-from agroapp.pipelines.report_solution import solve_reports
-from agroapp.report import create_excel_report_file
+from bot_client import send_reactions, reply_on_message
+from config import settings
+from database import async_session
+from dump import dump_message_silently, dump_report_silently
+from entities import ChatMessage, MessageStatus, Department, Operation, Crop, Report
+from google_drive import upload_excel_file_to_folder
+from models import ChatMessageReactionRequest, MessageType, ChatMessageReplyRequest
+from pipelines.message_definition import define_message_type
+from pipelines.report_solution import solve_reports
+from report import create_excel_report_file
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def process_message(background_tasks: BackgroundTasks, chat_message_id: in
                 status=chat_message.status,
             ))
         except Exception as e:
-            logger.error(f"Error: {str(e)}")
+            logger.error(f"Error: {e}", exc_info=True)
 
 
 async def process_report(chat_message_id: int):
@@ -70,6 +70,7 @@ async def process_report(chat_message_id: int):
         except Exception as e:
             chat_message.status = MessageStatus.failed
             chat_message.status_text = str(e)
+            logger.error("Error: {e}", exc_info=True)
         await session.commit()
     try:
         await send_reactions(ChatMessageReactionRequest(
@@ -78,7 +79,7 @@ async def process_report(chat_message_id: int):
             status=chat_message.status,
         ))
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {e}", exc_info=True)
 
 
 async def upload_report(chat_message_id: int):
@@ -106,4 +107,4 @@ async def upload_report(chat_message_id: int):
             text=f"Выгружен отчет на {report_on.strftime('%d-%m-%Y')}:\n{file_url}"
         ))
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error: {e}", exc_info=True)

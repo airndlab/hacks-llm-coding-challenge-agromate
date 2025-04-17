@@ -6,11 +6,11 @@ from datetime import date
 from docx import Document
 from openpyxl.workbook import Workbook
 
-from agroapp.config import settings
-from agroapp.entities import ChatMessage, Department, Operation, Crop
-from agroapp.entities import Report
-from agroapp.google_drive import upload_word_file_to_folder, upload_excel_file_to_folder, overwrite_excel_file_by_id
-from agroapp.report import append_reports_to_excel, create_excel_report, save_excel
+from config import settings
+from entities import ChatMessage, Department, Operation, Crop
+from entities import Report
+from google_drive import upload_word_file_to_folder, upload_excel_file_to_folder, overwrite_excel_file_by_id
+from report import append_reports_to_excel, create_excel_report, save_excel
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def dump_message_silently(chat_message: ChatMessage):
         upload_word_file_to_folder(file_path)
         logger.info(f"Created message dump file: {file_path}")
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error: {e}", exc_info=True)
 
 
 def dump_report_silently(chat_message: ChatMessage, reports: list[Report]):
@@ -66,11 +66,11 @@ def dump_report_silently(chat_message: ChatMessage, reports: list[Report]):
             overwrite_excel_file_by_id(_current_file_id, file_path)
             logger.info(f"Updated report dump file: {file_path}")
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error: {e}", exc_info=True)
 
 
 import datetime
-from agroapp.models import MessageStatus
+from models import MessageStatus
 
 cm = ChatMessage(
     id=1,

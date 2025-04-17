@@ -3,7 +3,7 @@ import math
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional, Dict, Any, List, Tuple
 
-from agroapp.entities import Department, Operation, Crop
+from entities import Department, Operation, Crop
 
 
 def _match_department_id(name: str, departments: list[Department]) -> int:

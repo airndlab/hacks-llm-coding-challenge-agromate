@@ -13,8 +13,8 @@ from .utils import (
     _match_operation_id,
 )
 
-from agroapp.config import settings
-from agroapp.entities import Report, Department, Operation, Crop
+from config import settings
+from entities import Report, Department, Operation, Crop
 
 from jinja2 import Template
 

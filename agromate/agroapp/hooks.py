@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from agroapp.database import init_db, load_dicts
+from database import init_db, load_dicts
 
 logger = logging.getLogger(__name__)
 

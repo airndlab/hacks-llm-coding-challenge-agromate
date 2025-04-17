@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlmodel import select, SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from agroapp.config import settings
-from agroapp.entities import Department, Operation, Crop
+from config import settings
+from entities import Department, Operation, Crop
 
 logger = logging.getLogger(__name__)
 

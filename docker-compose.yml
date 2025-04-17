@@ -3,24 +3,26 @@ name: agro
 services:
   app:
     build:
-      context: app
+      context: ./agromate
+      dockerfile: Dockerfile.app
     image: agromate:app
     restart: always
     environment:
       ENV_FILE: /.env
     volumes:
-      - ./.env:/.env
-      - ./data:/data
+      - ./agromate/.env:/.env
+      - ./agromate/data:/data
 
   bot:
     build:
-      context: bot
+      context: ./agromate
+      dockerfile: Dockerfile.bot
     image: agromate:bot
     restart: always
     environment:
       ENV_FILE: /.env
     volumes:
-      - ./.env:/.env
+      - ./agromate/.env:/.env
 
   db:
     image: postgres:17-alpine

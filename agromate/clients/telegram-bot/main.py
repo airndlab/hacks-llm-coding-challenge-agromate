@@ -2,9 +2,9 @@ import asyncio
 import logging
 import sys
 
-from agrobot.bot import bot_client
-from agrobot.api import start_api
-from agrobot.dispatch import start_pooling
+from bot import bot_client
+from api import start_api
+from dispatch import start_pooling
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +21,6 @@ async def main():
         start_pooling(bot_client),
         start_api()
     )
-
 
 if __name__ == "__main__":
     asyncio.run(main())

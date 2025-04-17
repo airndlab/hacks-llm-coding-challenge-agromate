@@ -8,8 +8,8 @@ from typing import Optional
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import PatternFill
 
-from agroapp.config import settings
-from agroapp.entities import Report
+from config import settings
+from entities import Report
 
 logger = logging.getLogger(__name__)
 

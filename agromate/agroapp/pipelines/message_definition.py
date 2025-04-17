@@ -1,4 +1,4 @@
-from agroapp.models import MessageType
+from models import MessageType
 
 
 async def define_message_type(text: str) -> MessageType:

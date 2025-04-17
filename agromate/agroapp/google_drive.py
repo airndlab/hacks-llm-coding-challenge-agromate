@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-from agroapp.config import settings
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def upload_word_file_to_folder(file_path: str) -> tuple[str, str]:
         logger.info(f"Uploaded word file '{file_path}' to Google Drive: {file_url}")
         return file_id, file_url
     except Exception as e:
-        logger.error(f"Error uploading word file '{file_path}': {e}")
+        logger.error(f"Error uploading word file '{file_path}': {e}", exc_info=True)
         raise Exception(f"Error uploading word file '{file_path}': {e}")
 
 
@@ -79,7 +79,7 @@ def upload_excel_file_to_folder(file_path: str) -> tuple[str, str]:
         logger.info(f"Uploaded excel '{file_path}' to Google Drive: {file_url}")
         return file_id, file_url
     except Exception as e:
-        logger.error(f"Error of uploading excel '{file_path}': {str(e)}")
+        logger.error(f"Error of uploading excel '{file_path}': {e}", exc_info=True)
         raise Exception(f"Error of uploading excel '{file_path}': {str(e)}")
 
 
@@ -99,5 +99,5 @@ def overwrite_excel_file_by_id(file_id: str, file_path: str):
         logger.info(f"Overwrote excel '{file_path}' in Google Drive: {file_url}")
         return file_id, file_url
     except Exception as e:
-        logger.error(f"Error of overwriting excel '{file_path}': {str(e)}")
+        logger.error(f"Error of overwriting excel '{file_path}': {e}", exc_info=True)
         raise Exception(f"Error of overwriting excel '{file_path}': {str(e)}")
