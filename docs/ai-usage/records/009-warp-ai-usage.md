@@ -1,46 +1,61 @@
-# AI-Assisted Terminal Operations with Warp
-
-**SDLC stage:** Implementation
-**Tool:** Warp AI
-**Task:** AI-assisted terminal operations and file management
-**Result:** Efficient file search, conversion and documentation
-**Author:** [Name]
-
-## Demo
+# Использование LLM для извлечения структурированной информации из агрономических сообщений
 
 ![Warp demo](../../assets/003-warp-create-record-about-using-it.gif)
 
-## AI Query
+## Задача  
+Преобразование неструктурированных сообщений агрономов (содержащих сленг, сокращения и ошибки) в строго структурированный JSON-формат, соответствующий заданной схеме данных о полевых работах.
 
-```
-find mov file 001 timelapse mov in my docs screenrecords folder
-how to create gif from this video
-copy this gif to ~/hacks-llm-coding-challenge-agromate/docs/assets/ if doesnt exists crete
-```
+## Использованный инструмент  
 
-## Detailed Description
+[GPT-4 (ChatGPT)](https://chatgpt.com/c/67ffd8b2-c4d4-800e-8d69-d51514e817b3) с поддержкой Constrained Decoding и встраиванием few-shot-примеров в системный промпт.
 
-Warp AI assisted with various terminal operations including locating specific video files, converting them to different formats, and organizing project assets. The tool provided step-by-step guidance for:
+## Процесс
 
-1. Finding a specific video file when the exact path was uncertain
-2. Converting a video file to GIF format using FFmpeg with appropriate settings
-3. Creating directory structures and copying files to the correct project locations
-4. Generating documentation based on existing project patterns
+### 1. Формализация задачи
+- Пользователь описал задачу: извлекать данные из текстов агрономов и представлять их в виде модели `FieldWorkLog`, содержащей записи `FieldWorkEntry`.
+- Структура полей включала такие атрибуты, как дата, отдел, операция, культура, площади и урожайность.
+- Были добавлены ограничения: значения некоторых полей строго из справочников, другие допускают свободный ввод (с пояснением от модели).
 
-Warp AI was particularly helpful in suggesting the correct FFmpeg parameters for optimal gif conversion and detecting when the command execution was interrupted due to the file size.
+### 2. Расширение схемы с учётом неопределённости
+- Для полей `operation`, `department_name`, `crop` была внедрена обёртка, позволяющая указывать:
+  - `valid` — если значение из справочника,
+  - `predict` — если значение угадано моделью на основе контекста (с пояснением),
+  - `raw` — если значение явно указано в сообщении, но не входит в справочник (также с пояснением).
+- Сформирована обобщённая схема `FieldWorkLogAnnotated`.
 
-## Advantages
+### 3. Создание few-shot примеров
+- Пользователь подготовил вручную набор репрезентативных сообщений агрономов.
+- Для каждого примера были вручную размечены правильные записи с полями и пояснениями.
+- Создано описание для каждого примера (`explanation`) с разбором, как именно были интерпретированы значения.
 
-- Contextual command suggestions based on current directory and recent operations
-- Natural language understanding for complex file operations
-- Intelligent error handling and alternative suggestions when commands fail
-- Step-by-step guidance for multi-step processes
-- Ability to understand project structure and maintain consistency
-- Real-time feedback and explanation of command outputs
+### 4. Обновление системного промпта
+- Промпт был адаптирован под новую логику с аннотированными полями.
+- Удалены устаревшие инструкции (например, «не придумывать значения»), заменены на инструкции про `valid`, `predict` и `raw`.
+- Интегрированы примеры в виде few-shot-контекста для обучения модели на практике.
 
-## Limitations
+### 5. Поддержка прямого и обратного преобразования
+- Реализованы функции:
+  - `convert_annotated_to_strict()` — для преобразования аннотированной записи обратно в строгий формат (с подстановкой значений по умолчанию при `raw`);
+  - Конвертация старого формата в новый с `status: valid`.
 
-- Large file operations (like full video to GIF conversion) still require manual optimization
-- Some directory permission issues required additional troubleshooting
-- Occasionally requires rephrasing queries for optimal command suggestions
-- Limited to terminal operations rather than comprehensive project management
+### 6. Автоматизация сохранения и оценки
+- Выгрузка результатов до и после обработки:
+  - `raw_deepseek_demo_mode_evaluation_results.json` — с аннотированными полями;
+  - `deepseek_demo_mode_evaluation_results.json` — с приведённым строгим JSON для подсчёта метрик.
+- Обработка ошибок сериализации (`json.dump`) и сохранение объектов.
+
+## Преимущества использования LLM
+
+1. **Интерпретация неоднозначного текста**: распознавание смысла даже при опечатках, сленге и нестандартной структуре.  
+2. **Гибкость представления**: возможность указывать степень уверенности модели в извлечённом значении.  
+3. **Быстрое масштабирование**: возможность автоматически обрабатывать сотни сообщений без ручной разметки.  
+4. **Формализация логики обработки**: перенос человеческих эвристик в явный код и примеры, которые понятны LLM.
+
+## Ограничения
+
+1. Требуется чёткая настройка системного промпта и careful design few-shot-примеров.  
+2. Необходимо ручное уточнение в спорных случаях (особенно для `predict`/`raw`).  
+3. Возможны ложные срабатывания при недостаточно точной формулировке правила в `explanation`.
+
+## Выводы  
+Использование LLM позволило реализовать надёжный pipeline интерпретации агрономических сообщений в формализованный JSON. Подход с аннотированными полями даёт гибкость и прозрачность для downstream-задач, включая валидацию, переобучение моделей и анализ неуверенных предсказаний. Работа продемонстрировала высокую применимость LLM в агро-индустрии для автоматизации первичной документации полевых работ.
