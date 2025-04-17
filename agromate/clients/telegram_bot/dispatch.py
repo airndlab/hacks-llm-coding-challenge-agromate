@@ -27,7 +27,7 @@ async def question_handler(message: Message) -> None:
             created_at=message.date,
         ))
         logger.info(f"Created message from '{username}' with id: {created_message.id}")
-        await message.react([ReactionTypeEmoji(emoji="👀")])
+        await message.react([ReactionTypeEmoji(emoji="🤔")])
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         await message.react([ReactionTypeEmoji(emoji="🗿")])

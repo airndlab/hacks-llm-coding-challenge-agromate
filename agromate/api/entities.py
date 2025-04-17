@@ -10,6 +10,7 @@ class ChatMessage(SQLModel, table=True):
     __tablename__ = "chat_message"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    serial_num: int = Field(default=0)
     username: str
     user_id: str
     chat_id: str

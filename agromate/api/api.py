@@ -1,12 +1,14 @@
 import logging
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from agroapp.processors import process_message
+from agroapp.config import settings
 from agroapp.database import get_async_session_as_generator
 from agroapp.entities import ChatMessage
 from agroapp.models import ChatMessageCreateRequest, ChatMessageCreateResponse, MessageStatus
+from agroapp.processors import process_message
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,15 @@ async def create_message(
         chat_message.id = None
         chat_message.status = MessageStatus.new
         chat_message.created_at = chat_message.created_at.replace(tzinfo=None)
+        if settings.google_drive_folder_dumped:
+            next_serial = (await session.exec(
+                select(func.coalesce(func.max(ChatMessage.serial_num), 0)).where(
+                    ChatMessage.user_id == chat.user_id
+                )
+            )).one() + 1
+            chat_message.serial_num = next_serial
+        else:
+            chat_message.serial_num = 0
         session.add(chat_message)
         await session.commit()
         await session.refresh(chat_message)

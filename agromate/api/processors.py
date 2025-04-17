@@ -5,13 +5,15 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from agroapp.bot_client import send_reactions, reply_on_message
+from agroapp.config import settings
 from agroapp.database import async_session
+from agroapp.dump import dump_message_silently, dump_report_silently
 from agroapp.entities import ChatMessage, MessageStatus, Department, Operation, Crop, Report
-from agroapp.google_drive import upload_report_to_folder
+from agroapp.google_drive import upload_excel_file_to_folder
 from agroapp.models import ChatMessageReactionRequest, MessageType, ChatMessageReplyRequest
 from agroapp.pipelines.message_definition import define_message_type
 from agroapp.pipelines.report_solution import solve_reports
-from agroapp.report import create_excel_report
+from agroapp.report import create_excel_report_file
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,8 @@ async def process_message(background_tasks: BackgroundTasks, chat_message_id: in
         message_type = await define_message_type(chat_message.message_text)
         if message_type == MessageType.report:
             chat_message.status = MessageStatus.processing
+            if settings.google_drive_folder_dumped:
+                dump_message_silently(chat_message)
             background_tasks.add_task(process_report, chat_message_id)
         elif message_type == MessageType.upload:
             chat_message.status = MessageStatus.spam
@@ -30,14 +34,15 @@ async def process_message(background_tasks: BackgroundTasks, chat_message_id: in
         else:
             chat_message.status = MessageStatus.spam
         await session.commit()
-    try:
-        await send_reactions(ChatMessageReactionRequest(
-            chat_id=chat_message.chat_id,
-            message_id=chat_message.message_id,
-            status=chat_message.status,
-        ))
-    except Exception as e:
-        logger.error(f"Error: {str(e)}")
+    if chat_message.status == MessageStatus.spam:
+        try:
+            await send_reactions(ChatMessageReactionRequest(
+                chat_id=chat_message.chat_id,
+                message_id=chat_message.message_id,
+                status=chat_message.status,
+            ))
+        except Exception as e:
+            logger.error(f"Error: {str(e)}")
 
 
 async def process_report(chat_message_id: int):
@@ -60,6 +65,8 @@ async def process_report(chat_message_id: int):
             session.add_all(reports)
             chat_message.status = MessageStatus.processed
             chat_message.status_text = f"Кол-во отчетов: {len(reports)}"
+            if settings.google_drive_folder_dumped:
+                dump_report_silently(chat_message, reports)
         except Exception as e:
             chat_message.status = MessageStatus.failed
             chat_message.status_text = str(e)
@@ -89,8 +96,8 @@ async def upload_report(chat_message_id: int):
             )
             .where(Report.worked_on == report_on)
         )).all()
-        file_path = create_excel_report(reports, report_on)
-        file_url = upload_report_to_folder(file_path)
+        file_path = create_excel_report_file(report_on, reports)
+        _, file_url = upload_excel_file_to_folder(file_path)
         await session.commit()
     try:
         await reply_on_message(ChatMessageReplyRequest(

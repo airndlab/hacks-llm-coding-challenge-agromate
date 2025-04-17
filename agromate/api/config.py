@@ -14,8 +14,11 @@ class Settings(BaseSettings):
     llm_api_key: str
     configs_path: str
     dicts_path: str
+    report_template_path: str
     google_credentials_path: str
     google_drive_folder_url: str
+    google_drive_folder_dumped: bool
+    team_name: str
 
 
 settings = Settings()

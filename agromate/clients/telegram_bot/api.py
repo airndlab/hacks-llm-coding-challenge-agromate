@@ -48,8 +48,6 @@ async def set_reaction_on_status(request: ChatMessageReactionRequest):
     try:
         if request.status == MessageStatus.spam:
             reaction = []
-        elif request.status == MessageStatus.processing:
-            reaction = [ReactionTypeEmoji(emoji="🤔")]
         elif request.status == MessageStatus.processed:
             reaction = [ReactionTypeEmoji(emoji="👌")]
         elif request.status == MessageStatus.failed:
