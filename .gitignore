@@ -1,0 +1,9 @@
+.idea/
+.env
+/.venv/
+data/google-credentails.json
+
+/app/.venv/
+
+__pycache__/
+*.pyc

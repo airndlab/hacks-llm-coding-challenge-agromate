@@ -1,0 +1,50 @@
+name: agro
+
+services:
+  app:
+    build:
+      context: app
+    image: agromate:app
+    restart: always
+    environment:
+      ENV_FILE: /.env
+    volumes:
+      - ./.env:/.env
+      - ./data:/data
+
+  bot:
+    build:
+      context: bot
+    image: agromate:bot
+    restart: always
+    environment:
+      ENV_FILE: /.env
+    volumes:
+      - ./.env:/.env
+
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-agrodb}
+      POSTGRES_USER: ${DB_USER:-agroman}
+      POSTGRES_PASSWORD: ${DB_PASS:-agropass}
+    ports:
+      - 5432:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  metabase:
+    image: metabase/metabase:v0.54.x
+    restart: always
+    environment:
+      MB_DB_TYPE: h2
+      JAVA_TIMEZONE: Europe/Moscow
+    ports:
+      - 3000:3000
+    volumes:
+      - metabase_data:/metabase-data
+
+volumes:
+  db_data:
+  metabase_data:
