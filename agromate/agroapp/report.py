@@ -2,7 +2,7 @@ import logging
 import os
 import tempfile
 from copy import copy
-from datetime import date
+from datetime import datetime
 from typing import Optional
 
 from openpyxl import load_workbook, Workbook
@@ -19,12 +19,12 @@ TEMPLATE_ROW_IDX = 2
 YELLOW_FILL = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 
 
-def create_excel_report_file(report_on: date, reports: list[Report]) -> str:
-    wb, _ = create_excel_report(report_on, reports)
-    filename = f"Отчет от {report_on.strftime('%d.%m.%Y %H:%M')}.xlsx"
+def create_excel_report_file(report_at: datetime, reports: list[Report]) -> str:
+    wb, _ = create_excel_report(report_at, reports)
+    filename = f"Отчет от {report_at.strftime('%d.%m.%Y %H:%M')}.xlsx"
     file_path = os.path.join(tempfile.gettempdir(), filename)
     save_excel(wb, file_path)
-    logger.info(f"Created report on '{report_on}': {file_path}")
+    logger.info(f"Created report on '{report_at}': {file_path}")
     return file_path
 
 

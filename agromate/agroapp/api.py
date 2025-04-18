@@ -8,14 +8,14 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from google_drive import upload_excel_file_to_folder
-from report import create_excel_report_file
 from bg import run_safe
 from config import settings
 from database import get_async_session_as_generator, get_next_serial_num
 from entities import ChatMessage, Report
+from google_drive import upload_excel_file_to_folder
 from models import ChatMessageCreateRequest, ChatMessageCreateResponse, MessageStatus, ReportResponse
 from processors import process_message
+from report import create_excel_report_file
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ async def create_message(
 
 @router.post("/reports")
 async def create_report(session: AsyncSession = Depends(get_async_session_as_generator)):
-    report_on = datetime.now(tz).date()
+    report_at = datetime.now(tz)
     reports: list[Report] = (await session.exec(
         select(Report)
         .options(
@@ -65,14 +65,14 @@ async def create_report(session: AsyncSession = Depends(get_async_session_as_gen
             selectinload(Report.operation),
             selectinload(Report.crop)
         )
-        .where(Report.worked_on == report_on)
+        .where(Report.worked_on == report_at)
     )).all()
-    file_path = create_excel_report_file(report_on, reports)
+    file_path = create_excel_report_file(report_at, reports)
     _, file_url = upload_excel_file_to_folder(file_path)
     # TODO: add pipeline
-    summary = f'Тут саммари'
+    summary = f'Даже не знаю с чего начать...'
     return ReportResponse(
-        created_on=report_on,
+        created_at=report_at,
         url=file_url,
         summary=summary
     )

@@ -38,6 +38,6 @@ class ChatMessageReplyRequest(BaseModel):
 
 
 class ReportResponse(BaseModel):
-    created_on: date
+    created_at: datetime
     url: str
     summary: str
