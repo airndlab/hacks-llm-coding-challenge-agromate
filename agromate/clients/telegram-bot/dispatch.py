@@ -268,6 +268,11 @@ async def command_dashboard_handler(message: Message):
     ))
 
 
+@dp.message(Command('help'))
+async def command_help_handler(message: Message):
+    await message.reply(msgs["help"].format())
+
+
 @dp.message(lambda message: message.photo)
 async def photo_handler(message: Message) -> None:
     try:
