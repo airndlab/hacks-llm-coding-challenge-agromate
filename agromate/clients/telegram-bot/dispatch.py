@@ -197,18 +197,21 @@ async def transcribe_audio(audio_bytes: bytes) -> str:
 
 # Обработка текста сообщения (и для обычных сообщений, и для распознанных из фото)
 async def process_message_text(message: Message, text: str) -> None:
-    username = message.from_user.username
+    if (message.forward_from and message.forward_from.username and message.forward_from.id):
+        username = message.forward_from.username
+        user_id = message.forward_from.id
+    else:
+        username = message.from_user.username
+        user_id = message.from_user.id
     logger.info(f"Processing message from '{username}':\n{text}")
-    
     created_message = await create_message(ChatMessageCreateRequest(
-        username=str(message.from_user.username),
-        user_id=str(message.from_user.id),
+        username=str(username),
+        user_id=str(user_id),
         chat_id=str(message.chat.id),
         message_id=str(message.message_id),
         message_text=text,
         created_at=message.date,
     ))
-    
     logger.info(f"Created message from '{username}' with id: {created_message.id}")
     await message.react([ReactionTypeEmoji(emoji="🤔")])
 
