@@ -85,7 +85,25 @@ async def process_report(chat_message_id: int):
             message_id=chat_message.message_id,
             status=chat_message.status,
         ))
-        if settings.bot_reply_on_failed and chat_message.status == MessageStatus.failed:
+        if settings.bot_reply_on_failed and chat_message.status == MessageStatus.processed:
+            notes = [
+                report.note
+                for report in reports
+                if not all([report.department_id, report.operation_id, report.crop_id]) and report.note
+            ]
+            if len(notes) > 0:
+                await reply_on_message(ChatMessageReplyRequest(
+                    chat_id=chat_message.chat_id,
+                    message_id=chat_message.message_id,
+                    text=(
+                        f"🌾 Нашла коса на камень..."
+                        f"\n\n"
+                        f"При обработке отчёта возникли некоторые неточности."
+                        f"\n\n"
+                        f"{notes}"
+                    )
+                ))
+        elif settings.bot_reply_on_failed and chat_message.status == MessageStatus.failed:
             await reply_on_message(ChatMessageReplyRequest(
                 chat_id=chat_message.chat_id,
                 message_id=chat_message.message_id,
