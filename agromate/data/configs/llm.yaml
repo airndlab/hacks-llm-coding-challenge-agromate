@@ -1,1 +1,2 @@
 model_name: accounts/fireworks/models/deepseek-v3-0324
+mlm_model_name: gpt-4o
