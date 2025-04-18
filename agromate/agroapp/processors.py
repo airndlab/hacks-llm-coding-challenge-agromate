@@ -4,6 +4,7 @@ import logging
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from bg import run_safe
 from bot_client import send_reactions, reply_on_message
 from config import settings
 from database import async_session
@@ -27,10 +28,10 @@ async def process_message(chat_message_id: int) -> None:
             chat_message.status = MessageStatus.processing
             if settings.google_drive_folder_dumped:
                 dump_message_silently(chat_message)
-            asyncio.create_task(process_report(chat_message_id))
+            asyncio.create_task(run_safe(process_report, chat_message_id))
         elif message_type == MessageType.upload:
             chat_message.status = MessageStatus.spam
-            asyncio.create_task(upload_report(chat_message_id))
+            asyncio.create_task(run_safe(upload_report, chat_message_id))
         else:
             chat_message.status = MessageStatus.spam
         await session.commit()
