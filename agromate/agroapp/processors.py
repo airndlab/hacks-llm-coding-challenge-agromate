@@ -10,11 +10,9 @@ from config import settings
 from database import async_session
 from dump import dump_message_silently, dump_report_silently
 from entities import ChatMessage, MessageStatus, Department, Operation, Crop, Report
-from google_drive import upload_excel_file_to_folder
 from models import ChatMessageReactionRequest, MessageType, ChatMessageReplyRequest
 from pipelines.message_definition import define_message_type
 from pipelines.report_solution import solve_reports
-from report import create_excel_report_file
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +27,6 @@ async def process_message(chat_message_id: int) -> None:
             if settings.google_drive_folder_dumped:
                 dump_message_silently(chat_message)
             asyncio.create_task(run_safe(process_report, chat_message_id))
-        elif message_type == MessageType.upload:
-            chat_message.status = MessageStatus.spam
-            asyncio.create_task(run_safe(upload_report, chat_message_id))
         else:
             chat_message.status = MessageStatus.spam
         await session.commit()
@@ -102,33 +97,5 @@ async def process_report(chat_message_id: int):
                     f"{chat_message.status_text}"
                 )
             ))
-    except Exception as e:
-        logger.error(f"Error: {e}", exc_info=True)
-
-
-async def upload_report(chat_message_id: int):
-    async with async_session() as session:
-        chat_message: ChatMessage = (await session.exec(
-            select(ChatMessage).where(ChatMessage.id == chat_message_id)
-        )).one_or_none()
-        report_on = chat_message.created_at.date()
-        reports: list[Report] = (await session.exec(
-            select(Report)
-            .options(
-                selectinload(Report.department),
-                selectinload(Report.operation),
-                selectinload(Report.crop)
-            )
-            .where(Report.worked_on == report_on)
-        )).all()
-        file_path = create_excel_report_file(report_on, reports)
-        _, file_url = upload_excel_file_to_folder(file_path)
-        await session.commit()
-    try:
-        await reply_on_message(ChatMessageReplyRequest(
-            chat_id=chat_message.chat_id,
-            message_id=chat_message.message_id,
-            text=f"Выгружен отчет на {report_on.strftime('%d-%m-%Y')}:\n{file_url}"
-        ))
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)

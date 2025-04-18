@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 from pydantic import BaseModel
@@ -30,7 +30,14 @@ class ChatMessageReactionRequest(BaseModel):
     message_id: str
     status: MessageStatus
 
+
 class ChatMessageReplyRequest(BaseModel):
     chat_id: str
     message_id: str
     text: str
+
+
+class ReportResponse(BaseModel):
+    created_on: date
+    url: str
+    summary: str

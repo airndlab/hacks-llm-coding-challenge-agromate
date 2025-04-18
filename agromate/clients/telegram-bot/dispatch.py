@@ -10,12 +10,13 @@ import asyncio
 
 from aiogram import Bot
 from aiogram import Dispatcher
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReactionTypeEmoji
 from aiogram.enums.content_type import ContentType
 from openai import OpenAI
 from PIL import Image
 
+from agromate.agroapp.api import create_report
 from app_client import create_message
 from models import ChatMessageCreateRequest
 from config import settings
@@ -236,6 +237,20 @@ async def command_start_handler(message: Message) -> None:
         f"Ну что, поехали? 🚜"
     ))
 
+@dp.message(Command('report'))
+async def command_report_handler(message: Message):
+    report = await create_report()
+    await message.reply((
+        f"Выгружен отчет на {report.created_on.strftime('%d-%m-%Y')}"
+        f"\n\n"
+        f"Саммари:"
+        f"\n"
+        f"{report.summary}"
+        f"\n\n"
+        f"Ссылка на отчет:"
+        f"\n"
+        f"{report.summary}"
+    ))
 
 @dp.message(lambda message: message.photo)
 async def photo_handler(message: Message) -> None:

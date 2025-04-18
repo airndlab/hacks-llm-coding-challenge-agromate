@@ -1,16 +1,16 @@
-from models import MessageType
-from typing import Dict, Any, Type
-from pydantic import BaseModel, Field
+import logging
+import os
+import time
+from pathlib import Path
 from typing import Literal
+
+import yaml
+from config import settings
+from jinja2 import Template
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
-from jinja2 import Template
-from config import settings
-import os
-from pathlib import Path
-import yaml
-import logging
-import time
+from models import MessageType
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -113,11 +113,6 @@ async def define_message_type(text: str) -> MessageType:
     message_len = len(text)
     logger.info(f"Определение типа сообщения длиной {message_len} символов")
     
-    # Быстрая проверка для очевидных случаев без вызова LLM
-    if text.lower().startswith("upload"):
-        logger.info(f"Обнаружена команда 'upload', сообщение определено как {MessageType.upload}")
-        return MessageType.upload
-        
     try:
         # Классификация сообщения через LLM
         result = await classify_message(text, model)
