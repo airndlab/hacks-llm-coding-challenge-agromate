@@ -239,7 +239,7 @@ async def command_report_handler(message: Message):
     await message.reply((
         f"📊 <b>Отчёт готов!</b>"
         f"\n\n"
-        f"🗓 Дата: <b>{report.created_on.strftime('%d-%m-%Y')}</b>"
+        f"🗓 Дата: <b>{report.created_on.strftime('%d.%m.%Y %H:%M')}</b>"
         f"\n\n"
         f"🌿 <b>Сводка с полей:</b>"
         f"\n"
