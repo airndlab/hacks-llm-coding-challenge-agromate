@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     bot_configs_path: str   # Путь к конфигурационным файлам по умолчанию
     ocr_api_key: str  # API ключ для OpenAI Vision
     audio_api_key: str = ""  # API ключ для OpenAI Audio API, если пусто - используем ocr_api_key
-
+    bot_messages_path: str
+    dashboard_url: str
 
 settings = Settings()
 # Если audio_api_key не указан, используем тот же ключ, что и для OCR
