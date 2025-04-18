@@ -1,25 +1,21 @@
-import logging
-import io
 import base64
+import io
+import logging
 import os
-import yaml
 from typing import Optional
-import httpx
-import aiohttp
-import asyncio
 
+import aiohttp
+import httpx
+import yaml
 from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReactionTypeEmoji
-from aiogram.enums.content_type import ContentType
 from openai import OpenAI
-from PIL import Image
 
-from api import create_report
-from app_client import create_message
-from models import ChatMessageCreateRequest
+from app_client import create_message, create_report
 from config import settings
+from models import ChatMessageCreateRequest
 
 logger = logging.getLogger(__name__)
 
