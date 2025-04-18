@@ -11,7 +11,7 @@ from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReactionTypeEmoji
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app_client import create_message, create_report
 from config import settings
@@ -59,8 +59,8 @@ def encode_image(image_bytes: bytes) -> str:
 # Вызов OpenAI Vision API
 async def transcribe_image(base64_image: str) -> str:
     try:
-        client = OpenAI(api_key=settings.ocr_api_key)
-        response = client.chat.completions.create(
+        client = AsyncOpenAI(api_key=settings.ocr_api_key)
+        response = await client.chat.completions.create(
             model=llm_model,
             messages=[
                 {
@@ -75,8 +75,7 @@ async def transcribe_image(base64_image: str) -> str:
                         },
                     ],
                 }
-            ],
-            max_tokens=4096
+            ]
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -194,10 +193,10 @@ async def transcribe_audio(audio_bytes: bytes) -> str:
         temp_file.name = "audio.ogg"  # Имя файла с расширением
 
         # Создаем клиент OpenAI с указанным API ключом
-        client = OpenAI(api_key=settings.audio_api_key)
+        client = AsyncOpenAI(api_key=settings.audio_api_key)
 
         # Вызываем API для транскрибации
-        response = client.audio.transcriptions.create(
+        response = await client.audio.transcriptions.create(
             model=audio_model,
             file=temp_file
         )
