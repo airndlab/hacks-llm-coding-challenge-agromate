@@ -43,6 +43,14 @@ llm_model = llm_config.get('ocr_model_name', 'gpt-4o')
 audio_model = llm_config.get('audio_model_name', 'whisper-1')
 
 
+def load_messages(path=settings.bot_messages_path) -> dict:
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+msgs = load_messages()
+
+
 # Кодирование изображения в base64
 def encode_image(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode("utf-8")
@@ -223,13 +231,7 @@ async def process_message_text(message: Message, text: str) -> None:
 
 @dp.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.reply((
-        f"🌾 Привет, коллега!"
-        f"\n\n"
-        f"Я — твой цифровой помощник в поле бумажек."
-        f"\n"
-        f"Помогаю с бюрократическим урожаем таким как отчёты."
-    ))
+    await message.reply(msgs["start"].format())
 
 
 @dp.message(Command('report'))
@@ -237,17 +239,33 @@ async def command_report_handler(message: Message):
     await message.react([ReactionTypeEmoji(emoji="🤔")])
     report = await create_report()
     await message.reply((
-        f"📊 <b>Отчёт готов!</b>"
-        f"\n\n"
-        f"🗓 Дата: <b>{report.created_at.strftime('%d.%m.%Y %H:%M')}</b>"
-        f"\n\n"
-        f"🌿 <b>Сводка с полей:</b>"
-        f"\n"
-        f"{report.summary}"
-        f"\n\n"
-        f'📎 <b>Ссылка на отчёт:</b> <a href="{report.url}">Открыть документ</a>'
+        msgs["report"]
+        .format(
+            report_at=report.created_at.strftime('%d.%m.%Y %H:%M'),
+            summary=report.summary,
+            url=report.url,
+        )
     ))
     await message.react([])
+
+
+@dp.message(Command('schedule'))
+async def command_schedule_handler(message: Message):
+    parts = message.text.strip().split(maxsplit=1)
+    if len(parts) == 2:
+        time_arg = parts[1]
+        await message.reply(msgs["schedule"]["success"].format(
+            time=time_arg,
+        ))
+    else:
+        await message.reply(msgs["schedule"]["error"].format())
+
+
+@dp.message(Command('dashboard'))
+async def command_dashboard_handler(message: Message):
+    await message.reply(msgs["dashboard"].format(
+        url=settings.dashboard_url
+    ))
 
 
 @dp.message(lambda message: message.photo)
