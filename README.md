@@ -136,6 +136,8 @@ graph TD
 | 009 | Реализация | Warp AI | AI-ассистированные операции в терминале | [Подробнее](./docs/ai-usage/records/009-warp-ai-terminal-usage.md) |
 | 010 | Разработка | GPT-4 | Извлечение структурированной информации из сообщений | [Подробнее](./docs/ai-usage/records/010-llm-prompt-generation.md) |
 
+[Видеозаписи](https://drive.google.com/drive/folders/1U-nVjNjhXb7g-xzYsbi8uhtAuxd3pLPQ?usp=sharing)
+
 ## Запуск проекта
 
 ### Предварительные требования
