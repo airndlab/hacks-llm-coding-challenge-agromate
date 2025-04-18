@@ -25,7 +25,7 @@
 
 [Telegram Bot @AgromateBot](https://t.me/AgromateBot)
 
-![Демонстрация работы](https://github.com/neuro-drive/agromate/raw/main/docs/assets/llm-cc-screencast.gif)
+![Демонстрация работы](docs/assets/llm-cc-screencast.gif)
 
 
 ## Структура репозитория
