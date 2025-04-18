@@ -6,6 +6,7 @@ from datetime import date
 from typing import Optional
 
 from openpyxl import load_workbook, Workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import PatternFill
 
 from config import settings
@@ -83,6 +84,8 @@ def append_reports_to_excel(wb: Workbook, start_row_idx: int, reports: list[Repo
                         (col_idx == 4 and not report.crop)
                 ):
                     dst.fill = YELLOW_FILL
+                    if report.note:
+                        dst.comment = Comment(report.note, settings.bot_name)
 
     next_row_idx = start_row_idx + len(reports)
     return next_row_idx

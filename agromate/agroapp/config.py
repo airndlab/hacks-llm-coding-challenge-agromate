@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     google_drive_folder_dumped: bool
     team_name: str
     mode: str
+    bot_name: str = "AgroMate"
 
 
 settings = Settings()
