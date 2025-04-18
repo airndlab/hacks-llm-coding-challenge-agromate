@@ -3,12 +3,13 @@ import logging
 import os
 from typing import AsyncGenerator, Any
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy import text, select, func
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlmodel import select, SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from config import settings
-from entities import Department, Operation, Crop
+from entities import Department, Operation, Crop, ChatMessage
 
 logger = logging.getLogger(__name__)
 
@@ -80,3 +81,16 @@ async def load_dicts():
             logger.info("Crops already present in DB")
 
         await session.commit()
+
+
+async def get_next_serial_num(session: AsyncSession, user_id: str) -> int:
+    # Хешируем user_id в int64 (можно заменить на crc32, если хочешь стабильность между перезапусками)
+    lock_key = abs(hash(user_id)) % (2 ** 31)
+
+    await session.execute(text(f"SELECT pg_advisory_xact_lock({lock_key})"))
+
+    result = await session.exec(
+        select(func.coalesce(func.max(ChatMessage.serial_num), 0))
+        .where(ChatMessage.user_id == user_id)
+    )
+    return result.one() + 1

@@ -1,11 +1,10 @@
 import logging
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from config import settings
-from database import get_async_session_as_generator
+from database import get_async_session_as_generator, get_next_serial_num
 from entities import ChatMessage
 from models import ChatMessageCreateRequest, ChatMessageCreateResponse, MessageStatus
 from processors import process_message
@@ -30,11 +29,7 @@ async def create_message(
         chat_message.status = MessageStatus.new
         chat_message.created_at = chat_message.created_at.replace(tzinfo=None)
         if settings.google_drive_folder_dumped:
-            next_serial = (await session.exec(
-                select(func.coalesce(func.max(ChatMessage.serial_num), 0)).where(
-                    ChatMessage.user_id == request.user_id
-                )
-            )).one() + 1
+            next_serial = await get_next_serial_num(session, request.user_id)
             chat_message.serial_num = next_serial
         else:
             chat_message.serial_num = 0
