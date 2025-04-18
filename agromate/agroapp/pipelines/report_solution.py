@@ -47,9 +47,9 @@ auto_schema_hints = prompts_config.get("baseline_schema_hints")
 auto_few_shot_examples_str = prompts_config.get("baseline_few_shot_examples_str")
 
 # Шаблоны и подсказки для режима DEMO
-DEMO_SYSTEM_PROMPT_TEMPLATE = Template(prompts_config.get("mode_demo_system_prompt_template", prompts_config.get("baseline_system_prompt_template")))
-demo_schema_hints = prompts_config.get("demo_mode_schema_hints", auto_schema_hints)
-demo_few_shot_examples_str = prompts_config.get("demo_mode_few_shot_examples_str", auto_few_shot_examples_str)
+DEMO_SYSTEM_PROMPT_TEMPLATE = Template(prompts_config.get("mode_demo_system_prompt_template"))
+demo_schema_hints = prompts_config.get("demo_mode_schema_hints")
+demo_few_shot_examples_str = prompts_config.get("demo_mode_few_shot_examples_str",)
 
 # Инициализируем модель
 model = ChatOpenAI(
@@ -175,7 +175,7 @@ async def solve_reports(
                     logger.info(f"   🔍 Подразделение '{entry.department_name.value}' определено как predict: {entry.department_name.explanation}")
                 else:  # 'raw'
                     department_raw = entry.department_name.value
-                    department_predicted = entry.department_name.value
+                    department_predicted = None
                     explanations.append(f"Подразделение: {entry.department_name.explanation}")
                     logger.info(f"   ⚠️ Подразделение '{department_raw}' определено как raw с объяснением: {entry.department_name.explanation}")
                 
@@ -200,7 +200,7 @@ async def solve_reports(
                     logger.info(f"   🔍 Операция '{entry.operation.value}' определена как predict: {entry.operation.explanation}")
                 else:  # 'raw'
                     operation_raw = entry.operation.value
-                    operation_predicted = entry.operation.value
+                    operation_predicted = None
                     explanations.append(f"Операция: {entry.operation.explanation}")
                     logger.info(f"   ⚠️ Операция '{operation_raw}' определена как raw с объяснением: {entry.operation.explanation}")
                 
@@ -225,7 +225,7 @@ async def solve_reports(
                     logger.info(f"   🔍 Культура '{entry.crop.value}' определена как predict: {entry.crop.explanation}")
                 else:  # 'raw'
                     crop_raw = entry.crop.value
-                    crop_predicted = entry.crop.value
+                    crop_predicted = None
                     explanations.append(f"Культура: {entry.crop.explanation}")
                     logger.info(f"   ⚠️ Культура '{crop_raw}' определена как raw с объяснением: {entry.crop.explanation}")
                 

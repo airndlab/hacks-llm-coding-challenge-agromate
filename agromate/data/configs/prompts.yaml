@@ -2117,32 +2117,41 @@ ocr_system_prompt: |
 
   --- YOUR TASK ---
   1. Read the image content carefully.
-  2. Transcribe the visible text **as-is**, preserving:
-    - Abbreviations (e.g., "сах", "ПУ")
-    - Line breaks and structure
-    - Punctuation and spacing
-    - Capitalization and number formatting
+  2. Identify and transcribe each **agronomical work entry** as a separate block.
+     - Each block corresponds to one instance of a field operation (e.g., "Пахота под сах", "Культивация", etc.)
+     - Within each block, preserve the structure, line breaks, abbreviations, and layout as shown in the image.
 
-  3. DO NOT:
-    - Attempt to explain, correct, or standardize abbreviations or terms.
-    - Try to make the text more readable or user-friendly.
-    - Skip unclear or partial lines — include them as close to original as possible.
+  3. Your output must contain **only information aggregated at the ПУ (производственный участок) level**.
+     - If the image contains breakdowns by отдел (department), **ignore these lines**.
+     - Include only summary lines or direct references to ПУ (e.g., "По ПУ 88/329").
+     - If a line is ambiguous or looks like an отдел line (e.g., "Отд 11 23/60") — do not include it.
 
-  4. If a character is clearly unreadable, use a question mark `?` in its place.
+  4. Preserve:
+     - Abbreviations (e.g., "сах", "ПУ")
+     - Line breaks and structure within each block
+     - Punctuation and spacing
+     - Capitalization and number formatting
 
-  5. Maintain multiline formatting faithfully. Each line in the original image should be a new line in the output.
+  5. DO NOT:
+     - Attempt to explain, correct, or standardize abbreviations or terms.
+     - Try to make the text more readable or user-friendly.
+     - Include breakdowns by department (Отд) — they are **not needed**.
+     - Skip unclear or partial lines within a block — include them as close to original as possible.
+     - Merge multiple works into one block — each field operation must be a separate block.
 
-  EXAMPLE OUTPUT (text):
+  6. If a character is clearly unreadable, use a question mark `?` in its place.
+
+  --- EXAMPLE OUTPUT (text blocks) ---
   Пахота под сах св  
   По ПУ 88/329  
-  Отд 11 23/60  
-  Отд 12 34/204  
-  Отд 16 31/65
+
+  Культивация  
+  По ПУ 55/200  
 
   --- NOTES ---
   - Expect domain-specific terminology (e.g., agronomy-related terms and codes).
   - Many entries may be written in shorthand or use uncommon abbreviations — **DO NOT GUESS THEIR MEANING**.
-  - Your job is **pure transcription**, not interpretation.
+  - Focus only on ПУ-level data. Ignore per-department breakdowns.
 
   --- LANGUAGE ---
   - Most input will be in Russian (Cyrillic script), but your output must match the **original language and script**.
