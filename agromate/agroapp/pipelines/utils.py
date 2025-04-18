@@ -186,7 +186,7 @@ def create_annotated_field_work_log_schema(
     # --- Основная запись ---
     class FieldWorkEntryAnnotated(BaseModel):
         date: Optional[str] = Field(
-            None, description="Дата проведения операции (формат: 'мм-дд' или 'гггг-мм-дд')"
+            None, description="Дата проведения операции (формат: 'мм-дд')"
         )
 
         department_name: DepartmentNameAnnotated = Field(..., description="Название подразделения с аннотацией")
@@ -211,7 +211,4 @@ def create_annotated_field_work_log_schema(
             ..., description="Список записей о полевых операциях с аннотированными полями"
         )
 
-    return FieldWorkEntryAnnotated, FieldWorkLogAnnotated
-
-    logger.info(f"✅ Аннотированная схема для DEMO режима создана успешно")
     return FieldWorkEntryAnnotated, FieldWorkLogAnnotated
