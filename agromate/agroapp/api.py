@@ -65,7 +65,7 @@ async def create_report(session: AsyncSession = Depends(get_async_session_as_gen
             selectinload(Report.operation),
             selectinload(Report.crop)
         )
-        .where(Report.worked_on == report_at)
+        .where(Report.worked_on == report_at.date())
     )).all()
     file_path = create_excel_report_file(report_at, reports)
     _, file_url = upload_excel_file_to_folder(file_path)
