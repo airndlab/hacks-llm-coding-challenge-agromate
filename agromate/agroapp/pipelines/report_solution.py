@@ -32,7 +32,7 @@ MODE = settings.mode
 logger.info(f"🚀 Запуск пайплайна report_solution в режиме: {MODE}")
 
 # Загружаем конфигурацию
-llm_config_path = os.path.join(settings.configs_path, "llm.yaml")
+llm_config_path = os.path.join(settings.configs_path, "models.yaml")
 prompts_config_path = os.path.join(settings.configs_path, "prompts.yaml")
 
 with open(Path(llm_config_path), mode="r", encoding="utf-8") as f:
@@ -53,11 +53,13 @@ demo_few_shot_examples_str = prompts_config.get("demo_mode_few_shot_examples_str
 
 # Инициализируем модель
 model = ChatOpenAI(
-    model=llm_config.get("model_name"),
+    model=llm_config.get("llm_model_name"),
     openai_api_key=settings.llm_api_key,
     openai_api_base=settings.llm_api_base_url,
+    max_retries=30,
+    timeout=90,
 )
-logger.info(f"🤖 Инициализирована модель: {llm_config.get('model_name')}")
+logger.info(f"🤖 Инициализирована модель: {llm_config.get('llm_model_name')}")
 
 
 async def solve_reports(
@@ -106,10 +108,8 @@ async def solve_reports(
                 schema_hints=demo_schema_hints,
             )
             
-            logger.info(f"🔍 Генерация промпта завершена. Длина: {len(system_prompt)} символов")
-            
             # Выполняем запрос к модели
-            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('model_name')}")
+            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('llm_model_name')}")
             model_start_time = time.time()
             field_work_log = await model.with_structured_output(FieldWorkLogAnnotated).ainvoke(
                 [SystemMessage(content=system_prompt)]
@@ -155,6 +155,9 @@ async def solve_reports(
                 department_raw = None
                 department_predicted = None
                 
+                # Собираем все объяснения для поля note
+                explanations = []
+                
                 if entry.department_name.status == 'valid':
                     try:
                         department_id = _match_department_id(entry.department_name.value, departments)
@@ -163,15 +166,18 @@ async def solve_reports(
                         # Если не найдено соответствие, обрабатываем как raw
                         logger.warning(f"   ⚠️ Подразделение '{entry.department_name.value}' помечено как valid, но не найдено в БД")
                         department_raw = entry.department_name.value
-                        department_predicted = f"Не найдено в БД: {str(e)}"
+                        department_predicted = entry.department_name.value
+                        explanations.append(f"Подразделение: {str(e)}")
                 elif entry.department_name.status == 'predict':
                     department_raw = None
-                    department_predicted = entry.department_name.explanation
-                    logger.info(f"   🔍 Подразделение '{entry.department_name.value}' определено как predict: {department_predicted}")
+                    department_predicted = entry.department_name.value
+                    explanations.append(f"Подразделение: {entry.department_name.explanation}")
+                    logger.info(f"   🔍 Подразделение '{entry.department_name.value}' определено как predict: {entry.department_name.explanation}")
                 else:  # 'raw'
                     department_raw = entry.department_name.value
-                    department_predicted = entry.department_name.explanation
-                    logger.info(f"   ⚠️ Подразделение '{department_raw}' определено как raw с объяснением: {department_predicted}")
+                    department_predicted = entry.department_name.value
+                    explanations.append(f"Подразделение: {entry.department_name.explanation}")
+                    logger.info(f"   ⚠️ Подразделение '{department_raw}' определено как raw с объяснением: {entry.department_name.explanation}")
                 
                 operation_id = None
                 operation_raw = None
@@ -185,15 +191,18 @@ async def solve_reports(
                         # Если не найдено соответствие, обрабатываем как raw
                         logger.warning(f"   ⚠️ Операция '{entry.operation.value}' помечена как valid, но не найдена в БД")
                         operation_raw = entry.operation.value
-                        operation_predicted = f"Не найдено в БД: {str(e)}"
+                        operation_predicted = entry.operation.value
+                        explanations.append(f"Операция: {str(e)}")
                 elif entry.operation.status == 'predict':
                     operation_raw = None
-                    operation_predicted = entry.operation.explanation
-                    logger.info(f"   🔍 Операция '{entry.operation.value}' определена как predict: {operation_predicted}")
+                    operation_predicted = entry.operation.value
+                    explanations.append(f"Операция: {entry.operation.explanation}")
+                    logger.info(f"   🔍 Операция '{entry.operation.value}' определена как predict: {entry.operation.explanation}")
                 else:  # 'raw'
                     operation_raw = entry.operation.value
-                    operation_predicted = entry.operation.explanation
-                    logger.info(f"   ⚠️ Операция '{operation_raw}' определена как raw с объяснением: {operation_predicted}")
+                    operation_predicted = entry.operation.value
+                    explanations.append(f"Операция: {entry.operation.explanation}")
+                    logger.info(f"   ⚠️ Операция '{operation_raw}' определена как raw с объяснением: {entry.operation.explanation}")
                 
                 crop_id = None
                 crop_raw = None
@@ -207,15 +216,24 @@ async def solve_reports(
                         # Если не найдено соответствие, обрабатываем как raw
                         logger.warning(f"   ⚠️ Культура '{entry.crop.value}' помечена как valid, но не найдена в БД")
                         crop_raw = entry.crop.value
-                        crop_predicted = f"Не найдено в БД: {str(e)}"
+                        crop_predicted = entry.crop.value
+                        explanations.append(f"Культура: {str(e)}")
                 elif entry.crop.status == 'predict':
                     crop_raw = None
-                    crop_predicted = entry.crop.explanation
-                    logger.info(f"   🔍 Культура '{entry.crop.value}' определена как predict: {crop_predicted}")
+                    crop_predicted = entry.crop.value
+                    explanations.append(f"Культура: {entry.crop.explanation}")
+                    logger.info(f"   🔍 Культура '{entry.crop.value}' определена как predict: {entry.crop.explanation}")
                 else:  # 'raw'
                     crop_raw = entry.crop.value
-                    crop_predicted = entry.crop.explanation
-                    logger.info(f"   ⚠️ Культура '{crop_raw}' определена как raw с объяснением: {crop_predicted}")
+                    crop_predicted = entry.crop.value
+                    explanations.append(f"Культура: {entry.crop.explanation}")
+                    logger.info(f"   ⚠️ Культура '{crop_raw}' определена как raw с объяснением: {entry.crop.explanation}")
+                
+                # Создаем note объединением всех объяснений
+                note = None
+                if explanations:
+                    note = "; ".join(explanations)
+                    logger.info(f"   📝 Создана заметка: {note}")
                 
                 # Проверяем, что хотя бы один из ID не None
                 if department_id is None and operation_id is None and crop_id is None:
@@ -243,6 +261,15 @@ async def solve_reports(
                     cumulative_yield = entry.yield_kg_total / 100
                     logger.info(f"   📊 Конвертация всего, кг -> цн: {entry.yield_kg_total} -> {cumulative_yield}")
                 
+                # Проверяем только day_area, так как это обязательное поле
+                day_area = entry.processed_area_day
+                if day_area is None or day_area <= 0:
+                    day_area = 1
+                    logger.warning(f"   ⚠️ Некорректное значение day_area: {entry.processed_area_day}, устанавливаем значение 1")
+                
+                # Сохраняем cumulative_area как None, если модель вернула processed_area_total = None
+                cumulative_area = entry.processed_area_total
+                
                 # Создаем объект Report с учетом аннотаций
                 report = Report(
                     worked_on=message_created_at.date(),
@@ -256,8 +283,9 @@ async def solve_reports(
                     department_predicted=department_predicted,
                     operation_predicted=operation_predicted,
                     crop_predicted=crop_predicted,
-                    day_area=entry.processed_area_day,
-                    cumulative_area=entry.processed_area_total,
+                    note=note,
+                    day_area=day_area,
+                    cumulative_area=cumulative_area,
                     day_yield=day_yield,
                     cumulative_yield=cumulative_yield,
                 )
@@ -291,7 +319,7 @@ async def solve_reports(
             logger.info(f"🔍 Генерация промпта завершена. Длина: {len(system_prompt)} символов")
             
             # Выполняем запрос к модели
-            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('model_name')}")
+            logger.info(f"🧠 Отправка запроса к модели {llm_config.get('llm_model_name')}")
             model_start_time = time.time()
             field_work_log = await model.with_structured_output(FieldWorkLog).ainvoke(
                 [SystemMessage(content=system_prompt)]
@@ -313,13 +341,64 @@ async def solve_reports(
             # Обрабатываем результат
             reports = []
             for entry in field_work_log.entries:
-                department_id = _match_department_id(entry.department_name, departments)
-                operation_id = _match_operation_id(entry.operation, operations)
-                crop_id = _match_crop_id(entry.crop, crops)
+                # Собираем все объяснения для поля note
+                explanations = []
                 
-                logger.info(f"   🔍 Сопоставление: {entry.department_name} -> ID: {department_id}")
-                logger.info(f"   🔍 Сопоставление: {entry.operation} -> ID: {operation_id}")
-                logger.info(f"   🔍 Сопоставление: {entry.crop} -> ID: {crop_id}")
+                try:
+                    department_id = _match_department_id(entry.department_name, departments)
+                    logger.info(f"   🔍 Сопоставление: {entry.department_name} -> ID: {department_id}")
+                    department_raw = None
+                    department_predicted = None
+                except ValueError as e:
+                    department_id = None
+                    department_raw = entry.department_name
+                    department_predicted = entry.department_name
+                    explanations.append(f"Подразделение: {str(e)}")
+                    logger.warning(f"   ⚠️ Ошибка сопоставления подразделения: {e}")
+                
+                try:
+                    operation_id = _match_operation_id(entry.operation, operations)
+                    logger.info(f"   🔍 Сопоставление: {entry.operation} -> ID: {operation_id}")
+                    operation_raw = None
+                    operation_predicted = None
+                except ValueError as e:
+                    operation_id = None
+                    operation_raw = entry.operation
+                    operation_predicted = entry.operation
+                    explanations.append(f"Операция: {str(e)}")
+                    logger.warning(f"   ⚠️ Ошибка сопоставления операции: {e}")
+                
+                try:
+                    crop_id = _match_crop_id(entry.crop, crops)
+                    logger.info(f"   🔍 Сопоставление: {entry.crop} -> ID: {crop_id}")
+                    crop_raw = None
+                    crop_predicted = None
+                except ValueError as e:
+                    crop_id = None
+                    crop_raw = entry.crop
+                    crop_predicted = entry.crop
+                    explanations.append(f"Культура: {str(e)}")
+                    logger.warning(f"   ⚠️ Ошибка сопоставления культуры: {e}")
+                
+                # Создаем note объединением всех объяснений
+                note = None
+                if explanations:
+                    note = "; ".join(explanations)
+                    logger.info(f"   📝 Создана заметка: {note}")
+                
+                # Проверяем, что хотя бы один из ID не None
+                if department_id is None and operation_id is None and crop_id is None:
+                    logger.warning(f"   ⚠️ Ни одно поле не имеет валидного ID, используем заглушки из первых записей")
+                    # Используем первые записи в качестве заглушек, если ни один ID не найден
+                    if not department_id and departments:
+                        department_id = departments[0].id
+                        logger.info(f"   🔧 Установлена заглушка для department_id: {department_id}")
+                    if not operation_id and operations:
+                        operation_id = operations[0].id
+                        logger.info(f"   🔧 Установлена заглушка для operation_id: {operation_id}")
+                    if not crop_id and crops:
+                        crop_id = crops[0].id
+                        logger.info(f"   🔧 Установлена заглушка для crop_id: {crop_id}")
                 
                 # Преобразование килограммов в центнеры (делим на 100)
                 day_yield = None
@@ -333,14 +412,30 @@ async def solve_reports(
                     cumulative_yield = entry.yield_kg_total / 100
                     logger.info(f"   📊 Конвертация всего, кг -> цн: {entry.yield_kg_total} -> {cumulative_yield}")
                 
+                # Проверяем только day_area, так как это обязательное поле
+                day_area = entry.processed_area_day
+                if day_area is None or day_area <= 0:
+                    day_area = 1
+                    logger.warning(f"   ⚠️ Некорректное значение day_area: {entry.processed_area_day}, устанавливаем значение 1")
+                
+                # Сохраняем cumulative_area как None, если модель вернула processed_area_total = None
+                cumulative_area = entry.processed_area_total
+                
                 report = Report(
                     worked_on=message_created_at.date(),
                     chat_message_id=message_id,
                     department_id=department_id,
                     operation_id=operation_id,
                     crop_id=crop_id,
-                    day_area=entry.processed_area_day,
-                    cumulative_area=entry.processed_area_total,
+                    department_raw=department_raw,
+                    operation_raw=operation_raw,
+                    crop_raw=crop_raw,
+                    department_predicted=department_predicted,
+                    operation_predicted=operation_predicted,
+                    crop_predicted=crop_predicted,
+                    note=note,
+                    day_area=day_area,
+                    cumulative_area=cumulative_area,
                     day_yield=day_yield,
                     cumulative_yield=cumulative_yield,
                 )

@@ -15,7 +15,7 @@ import time
 logger = logging.getLogger(__name__)
 
 # Загрузка конфигурации LLM и промптов
-llm_config_path = os.path.join(settings.configs_path, "llm.yaml")
+llm_config_path = os.path.join(settings.configs_path, "models.yaml")
 prompts_config_path = os.path.join(settings.configs_path, "prompts.yaml")
 
 with open(Path(llm_config_path), mode="r", encoding="utf-8") as f:
@@ -46,9 +46,11 @@ class MessageClassification(BaseModel):
 
 # Инициализация модели
 model = ChatOpenAI(
-    model=llm_config.get("model_name"),
+    model=llm_config.get("llm_model_name"),
     openai_api_key=settings.llm_api_key,
     openai_api_base=settings.llm_api_base_url,
+    max_retries=30,
+    timeout=90,
 )
 
 
@@ -78,7 +80,7 @@ async def classify_message(
         message=message,
     )
 
-    logger.info(f"Отправка запроса к модели {llm_config.get('model_name')}")
+    logger.info(f"Отправка запроса к модели {llm_config.get('llm_model_name')}")
     
     try:
         answer = await model.with_structured_output(MessageClassification).ainvoke(

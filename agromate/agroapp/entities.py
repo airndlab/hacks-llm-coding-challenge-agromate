@@ -78,7 +78,7 @@ class Report(SQLModel, table=True):
     note: Optional[str] = Field(default=None, nullable=True)
 
     day_area: float
-    cumulative_area: float
+    cumulative_area: Optional[float] = Field(default=None, nullable=True)
     day_yield: Optional[float] = Field(default=None, nullable=True)
     cumulative_yield: Optional[float] = Field(default=None, nullable=True)
 

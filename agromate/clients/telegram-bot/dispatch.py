@@ -39,8 +39,9 @@ prompts_config = load_yaml_config('prompts.yaml')
 OCR_SYSTEM_PROMPT = prompts_config.get('ocr_system_prompt', '')
 
 # Загрузка конфигурации LLM
-llm_config = load_yaml_config('llm.yaml')
-llm_model = llm_config.get('model', 'gpt-4o')
+llm_config = load_yaml_config('models.yaml')
+llm_model = llm_config.get('ocr_model_name', 'gpt-4o')
+audio_model = llm_config.get('audio_model_name', 'whisper-1')
 
 # Кодирование изображения в base64
 def encode_image(image_bytes: bytes) -> str:
@@ -124,6 +125,76 @@ async def download_photo(message: Message) -> Optional[bytes]:
         logger.error(f"Error getting file information: {e}")
         return None
 
+# Загрузка голосового сообщения или аудио из сообщения
+async def download_voice(message: Message) -> Optional[bytes]:
+    content = message.voice or message.audio
+    if not content:
+        return None
+    
+    try:
+        # Получаем URL файла
+        file = await message.bot.get_file(content.file_id)
+        
+        # Формируем URL для скачивания
+        file_path = file.file_path
+        bot_token = settings.bot_token
+        file_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        
+        # Скачиваем файл через aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(file_url) as response:
+                    if response.status == 200:
+                        return await response.read()
+                    else:
+                        logger.error(f"Error downloading voice file: HTTP {response.status}")
+                        return None
+        except Exception as e:
+            logger.error(f"Error with aiohttp for voice: {e}")
+            
+            # Запасной вариант - используем httpx
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(file_url)
+                    if response.status_code == 200:
+                        return response.content
+                    else:
+                        logger.error(f"Error downloading voice file with httpx: HTTP {response.status_code}")
+                        return None
+            except Exception as e2:
+                logger.error(f"Error with httpx for voice: {e2}")
+                
+                # Как последний вариант - используем встроенную функцию aiogram
+                try:
+                    return await message.bot.download_file(file.file_id)
+                except Exception as e3:
+                    logger.error(f"Error with aiogram download for voice: {e3}")
+                    return None
+    except Exception as e:
+        logger.error(f"Error getting voice file information: {e}")
+        return None
+
+# Транскрибация голосового сообщения через OpenAI API
+async def transcribe_audio(audio_bytes: bytes) -> str:
+    try:
+        # Сохраняем аудио во временный файл
+        temp_file = io.BytesIO(audio_bytes)
+        temp_file.name = "audio.ogg"  # Имя файла с расширением
+        
+        # Создаем клиент OpenAI с указанным API ключом
+        client = OpenAI(api_key=settings.audio_api_key)
+        
+        # Вызываем API для транскрибации
+        response = client.audio.transcriptions.create(
+            model=audio_model,
+            file=temp_file
+        )
+        
+        return response.text
+    except Exception as e:
+        logger.error(f"Error in transcribe_audio: {e}", exc_info=True)
+        return f"Ошибка при транскрибации аудио: {str(e)}"
+
 # Обработка текста сообщения (и для обычных сообщений, и для распознанных из фото)
 async def process_message_text(message: Message, text: str) -> None:
     username = message.from_user.username
@@ -204,6 +275,59 @@ async def photo_handler(message: Message) -> None:
         logger.error(f"Error in photo_handler: {e}", exc_info=True)
         await message.reply(f"Произошла ошибка при обработке фотографии: {str(e)}")
         await message.react([ReactionTypeEmoji(emoji="😢")])
+
+
+@dp.message(lambda message: message.voice or message.audio)
+async def voice_handler(message: Message) -> None:
+    try:
+        username = message.from_user.username
+        is_voice = bool(message.voice)
+        content_type = "голосовое сообщение" if is_voice else "аудиофайл"
+        
+        logger.info(f"Received {content_type} from '{username}'")
+        
+        # Вывод информации о голосовом сообщении
+        content = message.voice if is_voice else message.audio
+        file_id = content.file_id
+        duration = content.duration
+        
+        # Расширенное логирование информации о голосовом сообщении
+        extra_info = {}
+        if is_voice and hasattr(content, 'mime_type'):
+            extra_info['mime_type'] = content.mime_type
+        if hasattr(content, 'file_size'):
+            extra_info['file_size'] = content.file_size
+        
+        logger.info(f"Voice/Audio message details: file_id={file_id}, duration={duration}s, extra_info={extra_info}")
+        
+        # Ответ пользователю о начале обработки
+        processing_msg = await message.reply(f"Получил {content_type}! Длительность: {duration} сек. Обрабатываю...")
+        
+        # Загружаем аудио
+        audio_bytes = await download_voice(message)
+        if not audio_bytes:
+            await processing_msg.edit_text(f"Не удалось загрузить {content_type}. Пожалуйста, попробуйте ещё раз.")
+            return
+        
+        # Транскрибируем аудио
+        transcribed_text = await transcribe_audio(audio_bytes)
+        logger.info(f"Transcribed text from voice: {transcribed_text}")
+        
+        # Обновляем сообщение с результатом транскрибации
+        await processing_msg.edit_text(f"Распознал следующий текст:\n\n{transcribed_text}\n\nОбрабатываю...")
+        
+        # Обрабатываем распознанный текст как обычное текстовое сообщение
+        await process_message_text(message, transcribed_text)
+        
+        # Если есть подпись к голосовому сообщению
+        caption = message.caption or ""
+        if caption:
+            logger.info(f"Voice/Audio caption: {caption}")
+            await process_message_text(message, caption)
+        
+    except Exception as e:
+        logger.error(f"Error in voice_handler: {e}", exc_info=True)
+        await message.reply(f"Произошла ошибка при обработке голосового сообщения: {str(e)}")
 
 
 @dp.message()
