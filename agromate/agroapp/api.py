@@ -1,4 +1,5 @@
 import logging
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -27,7 +28,7 @@ async def create_message(
         chat_message = ChatMessage(**request.model_dump())
         chat_message.id = None
         chat_message.status = MessageStatus.new
-        chat_message.created_at = chat_message.created_at.replace(tzinfo=None)
+        chat_message.created_at = request.created_at.astimezone(ZoneInfo("Europe/Moscow")).replace(tzinfo=None)
         if settings.google_drive_folder_dumped:
             next_serial = await get_next_serial_num(session, request.user_id)
             chat_message.serial_num = next_serial
