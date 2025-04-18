@@ -238,15 +238,14 @@ async def command_report_handler(message: Message):
     report = await create_report()
     await message.reply((
         f"📊 <b>Отчёт готов!</b>"
-        f"\n"
+        f"\n\n"
         f"🗓 Дата: <b>{report.created_on.strftime('%d-%m-%Y')}</b>"
         f"\n\n"
         f"🌿 <b>Сводка с полей:</b>"
         f"\n"
         f"{report.summary}"
         f"\n\n"
-        f"📎 <b>Ссылка на отчёт:</b>"
-        f'<a href="{report.url}">Открыть документ</a>)'
+        f'📎 <b>Ссылка на отчёт:</b> <a href="{report.url}">Открыть документ</a>'
     ))
     await message.react([])
 
