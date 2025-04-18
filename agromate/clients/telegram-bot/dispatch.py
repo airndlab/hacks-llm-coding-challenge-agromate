@@ -237,16 +237,16 @@ async def command_report_handler(message: Message):
     await message.react([ReactionTypeEmoji(emoji="🤔")])
     report = await create_report()
     await message.reply((
-        f"📊 * Отчёт готов! *"
+        f"📊 <b>Отчёт готов!</b>"
         f"\n"
-        f"🗓 Дата: * {report.created_on.strftime('%d-%m-%Y')} *"
+        f"🗓 Дата: <b>{report.created_on.strftime('%d-%m-%Y')}</b>"
         f"\n\n"
-        f"🌿 * Сводка с полей: *"
+        f"🌿 <b>Сводка с полей:</b>"
         f"\n"
         f"{report.summary}"
         f"\n\n"
-        f"📎 * Ссылка на отчёт: *"
-        f"[Открыть документ]({report.url})"
+        f"📎 <b>Ссылка на отчёт:</b>"
+        f'<a href="{report.url}">Открыть документ</a>)'
     ))
     await message.react([])
 
