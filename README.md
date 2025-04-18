@@ -58,23 +58,6 @@ graph TD
     
     %% Экспорт и аналитика
     C -->|Отчеты| G[Google Drive]
-    
-    
-    %% Административный доступ
-    
-    
-    %% Стилизация
-    classDef external fill:#f9f,stroke:#333,stroke-width:2px
-    classDef core fill:#bbf,stroke:#333,stroke-width:2px
-    classDef storage fill:#bfb,stroke:#333,stroke-width:2px
-    classDef analytics fill:#fbb,stroke:#333,stroke-width:2px
-    classDef llm fill:#fbf,stroke:#333,stroke-width:2px
-    
-    class A,I external
-    class B,C,D,F core
-    class E storage
-    class G,H analytics
-    class J,K llm
 ```
 
 Архитектура АгроМейт разработана с учетом принципов масштабируемости, читаемости и расширяемости. Проект структурирован по функциональным компонентам с четким разделением ответственности между модулями. Каждый компонент имеет собственную область задач, а взаимодействие между ними осуществляется через четко определенные интерфейсы. Такой подход обеспечивает гибкость при добавлении новых функций и возможность легкой модификации существующих компонентов без влияния на остальную систему.
