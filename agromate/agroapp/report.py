@@ -21,7 +21,7 @@ YELLOW_FILL = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="s
 
 def create_excel_report_file(report_on: date, reports: list[Report]) -> str:
     wb, _ = create_excel_report(report_on, reports)
-    filename = f"{report_on.strftime('%d%m%Y')}.xlsx"
+    filename = f"Отчет от {report_on.strftime('%d.%m.%Y %H:%M')}.xlsx"
     file_path = os.path.join(tempfile.gettempdir(), filename)
     save_excel(wb, file_path)
     logger.info(f"Created report on '{report_on}': {file_path}")
