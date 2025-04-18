@@ -32,11 +32,13 @@ def dump_message_silently(chat_message: ChatMessage):
         # ИмяОтправителя_Номер-сообщения_МинутаЧасДеньМесяцГод
         filename = f"{safe_username}_{chat_message.serial_num}_{ts}.docx"
         file_path = os.path.join(tempfile.gettempdir(), filename)
+        # ДеньМесяцГод
+        subfolder_name = f"Сообщения от {chat_message.created_at.strftime('%d.%m.%Y')}"
 
         with open(file_path, "w+t"):
             doc.save(file_path)
 
-        upload_word_file_to_folder(file_path)
+        upload_word_file_to_folder(file_path, subfolder_name)
         logger.info(f"Created message dump file: {file_path}")
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)

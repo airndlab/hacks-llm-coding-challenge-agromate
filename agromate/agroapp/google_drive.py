@@ -31,11 +31,34 @@ folder_id = get_folder_id_from_url(settings.google_drive_folder_url)
 sa = create_service_account()
 
 
-def upload_word_file_to_folder(file_path: str) -> tuple[str, str]:
+def upload_word_file_to_folder(file_path: str, subfolder_name: str) -> tuple[str, str]:
     try:
+        resp = sa.files().list(
+            q=(
+                "mimeType='application/vnd.google-apps.folder' "
+                f"and name='{subfolder_name}' "
+                "and trashed=false "
+                f"and '{folder_id}' in parents"
+            ),
+            spaces='drive',
+            fields='files(id,name)'
+        ).execute()
+        files = resp.get('files', [])
+        if files:
+            subfolder_id = files[0]['id']
+        else:
+            folder_metadata = {
+                'name': subfolder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [folder_id]
+            }
+            created = sa.files().create(body=folder_metadata, fields='id').execute()
+            subfolder_id = created['id']
+            logger.info(f"Created subfolder: {subfolder_name}")
+
         file_metadata = {
             'name': os.path.basename(file_path),
-            'parents': [folder_id]
+            'parents': [subfolder_id]
         }
         media = MediaFileUpload(
             file_path,
