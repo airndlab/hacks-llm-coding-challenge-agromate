@@ -8,8 +8,8 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from agromate.agroapp.google_drive import upload_excel_file_to_folder
-from agromate.agroapp.report import create_excel_report_file
+from google_drive import upload_excel_file_to_folder
+from report import create_excel_report_file
 from bg import run_safe
 from config import settings
 from database import get_async_session_as_generator, get_next_serial_num

@@ -16,7 +16,7 @@ from aiogram.enums.content_type import ContentType
 from openai import OpenAI
 from PIL import Image
 
-from agromate.agroapp.api import create_report
+from api import create_report
 from app_client import create_message
 from models import ChatMessageCreateRequest
 from config import settings
