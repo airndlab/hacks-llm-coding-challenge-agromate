@@ -16,6 +16,7 @@ from google_drive import upload_excel_file_to_folder
 from models import ChatMessageCreateRequest, ChatMessageCreateResponse, MessageStatus, ReportResponse
 from processors import process_message
 from report import create_excel_report_file
+from pipelines.report_summary import summarize_reports
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +70,11 @@ async def create_report(session: AsyncSession = Depends(get_async_session_as_gen
     )).all()
     file_path = create_excel_report_file(report_at, reports)
     _, file_url = upload_excel_file_to_folder(file_path)
-    # TODO: add pipeline
-    summary = f'Даже не знаю с чего начать...'
+    
+    # Используем summarize_reports для анализа отчетов
+    logger.info(f"Запуск анализа {len(reports)} отчетов")
+    summary = await summarize_reports(reports)
+    
     return ReportResponse(
         created_at=report_at,
         url=file_url,
