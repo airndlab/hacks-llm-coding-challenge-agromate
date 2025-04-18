@@ -1,7 +1,8 @@
+import asyncio
 import logging
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from config import settings
@@ -20,7 +21,6 @@ router = APIRouter(
 @router.post("/messages")
 async def create_message(
         request: ChatMessageCreateRequest,
-        background_tasks: BackgroundTasks,
         session: AsyncSession = Depends(get_async_session_as_generator),
 ):
     try:
@@ -37,7 +37,7 @@ async def create_message(
         session.add(chat_message)
         await session.commit()
         await session.refresh(chat_message)
-        background_tasks.add_task(process_message, background_tasks, chat_message.id)
+        asyncio.create_task(process_message(chat_message.id))
         return ChatMessageCreateResponse(
             id=chat_message.id,
         )

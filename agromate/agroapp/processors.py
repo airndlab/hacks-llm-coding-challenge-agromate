@@ -1,6 +1,6 @@
+import asyncio
 import logging
 
-from fastapi import BackgroundTasks
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -18,7 +18,7 @@ from report import create_excel_report_file
 logger = logging.getLogger(__name__)
 
 
-async def process_message(background_tasks: BackgroundTasks, chat_message_id: int) -> None:
+async def process_message(chat_message_id: int) -> None:
     async with async_session() as session:
         result = await session.exec(select(ChatMessage).where(ChatMessage.id == chat_message_id))
         chat_message: ChatMessage = result.one_or_none()
@@ -27,10 +27,10 @@ async def process_message(background_tasks: BackgroundTasks, chat_message_id: in
             chat_message.status = MessageStatus.processing
             if settings.google_drive_folder_dumped:
                 dump_message_silently(chat_message)
-            background_tasks.add_task(process_report, chat_message_id)
+            asyncio.create_task(process_report(chat_message_id))
         elif message_type == MessageType.upload:
             chat_message.status = MessageStatus.spam
-            background_tasks.add_task(upload_report, chat_message_id)
+            asyncio.create_task(upload_report(chat_message_id))
         else:
             chat_message.status = MessageStatus.spam
         await session.commit()
