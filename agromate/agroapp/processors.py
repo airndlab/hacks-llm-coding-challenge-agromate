@@ -92,6 +92,7 @@ async def process_report(chat_message_id: int):
                 if not all([report.department_id, report.operation_id, report.crop_id]) and report.note
             ]
             if len(notes) > 0:
+                notes_msg = "\n".join(notes)
                 await reply_on_message(ChatMessageReplyRequest(
                     chat_id=chat_message.chat_id,
                     message_id=chat_message.message_id,
@@ -100,7 +101,7 @@ async def process_report(chat_message_id: int):
                         f"\n\n"
                         f"При обработке отчёта возникли некоторые неточности."
                         f"\n\n"
-                        f"{notes}"
+                        f"{notes_msg}"
                     )
                 ))
         elif settings.bot_reply_on_failed and chat_message.status == MessageStatus.failed:
