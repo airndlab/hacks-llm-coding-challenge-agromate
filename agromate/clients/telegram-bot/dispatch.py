@@ -237,11 +237,16 @@ async def command_start_handler(message: Message) -> None:
 async def command_report_handler(message: Message):
     await message.react([ReactionTypeEmoji(emoji="🤔")])
     report = await create_report()
+    # Get the report summary and truncate if too long (Telegram has a 4096 char limit)
+    summary = report.summary
+    if len(summary) > 3900:  # Safe limit to allow for other message parts
+        summary = summary[:3900] + "...\n"
+    
     await message.reply((
         msgs["report"]
         .format(
             report_at=report.created_at.strftime('%d.%m.%Y %H:%M'),
-            summary=report.summary,
+            summary=summary,
             url=report.url,
         )
     ))
