@@ -2145,6 +2145,7 @@ ocr_system_prompt: |
   6. If a character is clearly unreadable, use a question mark `?` in its place.
 
   --- EXAMPLE OUTPUT (text blocks) ---
+  ПУ "Восход" 13.05
   Пахота под сах св  
   По ПУ 88/329  
 
