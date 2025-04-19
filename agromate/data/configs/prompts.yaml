@@ -2120,6 +2120,8 @@ ocr_system_prompt: |
   2. Identify and transcribe each **agronomical work entry** as a separate block.
      - Each block corresponds to one instance of a field operation (e.g., "Пахота под сах", "Культивация", etc.)
      - Within each block, preserve the structure, line breaks, abbreviations, and layout as shown in the image.
+     - Entries may appear as free-form text or as rows in a table.
+     - Treat each table row as a separate block if it corresponds to a single field operation
 
   3. Your output must contain **only information aggregated at the ПУ (производственный участок) level**.
      - If the image contains breakdowns by отдел (department), **ignore these lines**.
@@ -2131,6 +2133,7 @@ ocr_system_prompt: |
      - Line breaks and structure within each block
      - Punctuation and spacing
      - Capitalization and number formatting
+     - If the content is in table format, transcribe row by row, preserving structure and ensuring each row is treated as a separate block if it matches the criteria (see above).
 
   5. DO NOT:
      - Attempt to explain, correct, or standardize abbreviations or terms.
@@ -2171,8 +2174,7 @@ prompt_report_summary: |
     **Your task:**  
     Write a **concise and well-structured summary** that:  
     - Describes the most frequent types of mistakes found in the records  
-    - Estimates how often each type of mistake occurs (you can use approximate counts or say if it's rare, frequent, or common)  
-    - Notes which fields (like crop, operation, date, etc.) are most often affected  
+    - Estimates how often each type of mistake occurs (you can use approximate counts or say if it's rare, frequent, or common)   
     - Optionally mentions if errors seem concentrated in certain departments, regions, or types of operations  
     - Includes any patterns, causes, or suggestions you can infer from the data
 

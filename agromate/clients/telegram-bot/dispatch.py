@@ -35,11 +35,11 @@ def load_yaml_config(filename):
 
 # Загрузка промптов
 prompts_config = load_yaml_config('prompts.yaml')
-OCR_SYSTEM_PROMPT = prompts_config.get('ocr_system_prompt', '')
+OCR_SYSTEM_PROMPT = prompts_config.get('ocr_system_prompt')
 
 # Загрузка конфигурации LLM
 llm_config = load_yaml_config('models.yaml')
-llm_model = llm_config.get('ocr_model_name', 'gpt-4o')
+llm_model = llm_config.get('ocr_model_name', 'gpt-4.1')
 audio_model = llm_config.get('audio_model_name', 'whisper-1')
 
 
@@ -60,24 +60,24 @@ def encode_image(image_bytes: bytes) -> str:
 async def transcribe_image(base64_image: str) -> str:
     try:
         client = AsyncOpenAI(api_key=settings.ocr_api_key)
-        response = await client.chat.completions.create(
+        response = await client.responses.create(
             model=llm_model,
-            messages=[
+            input=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": OCR_SYSTEM_PROMPT},
+                        {"type": "input_text", "text": OCR_SYSTEM_PROMPT},
                         {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            },
+                            "type": "input_image",
+                            "image_url": f"data:image/jpeg;base64,{base64_image}",
+                            "detail": "high",
                         },
                     ],
                 }
             ]
         )
-        return response.choices[0].message.content
+        return response.output_text
+    
     except Exception as e:
         logger.error(f"Error in transcribe_image: {e}", exc_info=True)
         return f"Ошибка при распознавании изображения: {str(e)}"
