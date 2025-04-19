@@ -2,3 +2,4 @@
 llm_model_name: gpt-4.1
 ocr_model_name: gpt-4.1
 audio_model_name: whisper-1
+llm_temperature: 0.3

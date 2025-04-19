@@ -2210,9 +2210,6 @@ prompt_report_summary: |
     Help your team understand what goes wrong most often when agronomists fill out records, so that future forms, training, or tools can prevent these mistakes.
 
     **Input Data:**  
-    Departments involved in the records:  
-    {{ department_stats}}
-
     Fieldwork records to analyze:  
     {{ problematic_reports }}
 
