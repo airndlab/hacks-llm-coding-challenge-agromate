@@ -42,10 +42,12 @@ services:
     restart: always
     environment:
       MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase.db
       JAVA_TIMEZONE: Europe/Moscow
     ports:
       - 3000:3000
     volumes:
+      - ./metabase.db:/metabase.db
       - metabase_data:/metabase-data
 
 volumes:
