@@ -49,6 +49,7 @@ model = ChatOpenAI(
     model=llm_config.get("llm_model_name"),
     openai_api_key=settings.llm_api_key,
     openai_api_base=settings.llm_api_base_url,
+    temperature=llm_config.get("llm_temperature", 0.3),
     max_retries=30,
     timeout=90,
 )

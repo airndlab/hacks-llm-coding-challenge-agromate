@@ -11,7 +11,7 @@ from aiogram import Bot
 from aiogram import Dispatcher
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReactionTypeEmoji
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app_client import create_message, create_report
 from config import settings
@@ -35,11 +35,11 @@ def load_yaml_config(filename):
 
 # Загрузка промптов
 prompts_config = load_yaml_config('prompts.yaml')
-OCR_SYSTEM_PROMPT = prompts_config.get('ocr_system_prompt', '')
+OCR_SYSTEM_PROMPT = prompts_config.get('ocr_system_prompt')
 
 # Загрузка конфигурации LLM
 llm_config = load_yaml_config('models.yaml')
-llm_model = llm_config.get('ocr_model_name', 'gpt-4o')
+llm_model = llm_config.get('ocr_model_name', 'gpt-4.1')
 audio_model = llm_config.get('audio_model_name', 'whisper-1')
 
 
@@ -59,26 +59,25 @@ def encode_image(image_bytes: bytes) -> str:
 # Вызов OpenAI Vision API
 async def transcribe_image(base64_image: str) -> str:
     try:
-        client = OpenAI(api_key=settings.ocr_api_key)
-        response = client.chat.completions.create(
+        client = AsyncOpenAI(api_key=settings.ocr_api_key)
+        response = await client.responses.create(
             model=llm_model,
-            messages=[
+            input=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": OCR_SYSTEM_PROMPT},
+                        {"type": "input_text", "text": OCR_SYSTEM_PROMPT},
                         {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            },
+                            "type": "input_image",
+                            "image_url": f"data:image/jpeg;base64,{base64_image}",
+                            "detail": "high",
                         },
                     ],
                 }
-            ],
-            max_tokens=4096
+            ]
         )
-        return response.choices[0].message.content
+        return response.output_text
+    
     except Exception as e:
         logger.error(f"Error in transcribe_image: {e}", exc_info=True)
         return f"Ошибка при распознавании изображения: {str(e)}"
@@ -194,10 +193,10 @@ async def transcribe_audio(audio_bytes: bytes) -> str:
         temp_file.name = "audio.ogg"  # Имя файла с расширением
 
         # Создаем клиент OpenAI с указанным API ключом
-        client = OpenAI(api_key=settings.audio_api_key)
+        client = AsyncOpenAI(api_key=settings.audio_api_key)
 
         # Вызываем API для транскрибации
-        response = client.audio.transcriptions.create(
+        response = await client.audio.transcriptions.create(
             model=audio_model,
             file=temp_file
         )
@@ -238,11 +237,16 @@ async def command_start_handler(message: Message) -> None:
 async def command_report_handler(message: Message):
     await message.react([ReactionTypeEmoji(emoji="🤔")])
     report = await create_report()
+    # Get the report summary and truncate if too long (Telegram has a 4096 char limit)
+    summary = report.summary
+    if len(summary) > 3900:  # Safe limit to allow for other message parts
+        summary = summary[:3900] + "...\n"
+    
     await message.reply((
         msgs["report"]
         .format(
             report_at=report.created_at.strftime('%d.%m.%Y %H:%M'),
-            summary=report.summary,
+            summary=summary,
             url=report.url,
         )
     ))

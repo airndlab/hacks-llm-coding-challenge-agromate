@@ -30,6 +30,7 @@ model = ChatOpenAI(
     model=llm_config.get("llm_model_name"),
     openai_api_key=settings.llm_api_key,
     openai_api_base=settings.llm_api_base_url,
+    temperature=llm_config.get("llm_temperature", 0.3),
     max_retries=30,
     timeout=90,
 )
@@ -58,46 +59,27 @@ async def summarize_reports(reports: list[Report]) -> str:
     
     logger.info(f"Найдено {len(problematic_reports)} проблемных отчетов")
     
-    # Подсчитываем статистику по отделам
-    department_counter = Counter()
-    for report in reports:
-        dept_name = report.department.subdivision if report.department else "Неизвестный отдел"
-        department_counter[dept_name] += 1
-    
-    # Подсчитываем статистику по отделам с проблемами
-    problem_dept_counter = Counter()
-    for report in problematic_reports:
-        dept_name = report.department.subdivision if report.department else "Неизвестный отдел"
-        problem_dept_counter[dept_name] += 1
-    
-    # Формируем текст статистики по отделам
-    department_stats = "\n".join([
-        f"- {dept}: всего записей {count}, проблемных: {problem_dept_counter.get(dept, 0)}" 
-        for dept, count in department_counter.items()
-    ])
-    
     # Подготавливаем данные проблемных отчетов для LLM
     problem_reports_text = ""
     for i, report in enumerate(problematic_reports, 1):
-        dept = report.department.subdivision if report.department else "Неизвестный отдел"
-        operation = report.operation.operation_name if report.operation else "Неизвестная операция"
-        crop = report.crop.crop_name if report.crop else "Неизвестная культура"
+        # Используем либо основное значение, либо предсказанное, либо сырое
+        dept = report.department.subdivision if report.department else (
+            report.department_predicted or report.department_raw or "Неизвестный отдел"
+        )
+        operation = report.operation.operation_name if report.operation else (
+            report.operation_predicted or report.operation_raw or "Неизвестная операция"
+        )
+        crop = report.crop.crop_name if report.crop else (
+            report.crop_predicted or report.crop_raw or "Неизвестная культура"
+        )
         
         problem_reports_text += f"{i}. Отдел: {dept}\n"
         problem_reports_text += f"   Операция: {operation}\n"
         problem_reports_text += f"   Культура: {crop}\n"
-        problem_reports_text += f"   Площадь за день: {report.day_area} га\n"
-        if report.cumulative_area:
-            problem_reports_text += f"   Общая площадь: {report.cumulative_area} га\n"
-        if report.day_yield:
-            problem_reports_text += f"   Урожай за день: {report.day_yield} кг\n"
-        if report.cumulative_yield:
-            problem_reports_text += f"   Общий урожай: {report.cumulative_yield} кг\n"
         problem_reports_text += f"   Проблема: {report.note}\n\n"
     
     # Формируем системный промпт с использованием шаблона из конфигурации
     system_prompt = SYSTEM_PROMPT_TEMPLATE.render(
-        department_stats=department_stats,
         problematic_reports=problem_reports_text
     )
     
