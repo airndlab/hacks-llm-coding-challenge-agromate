@@ -3,6 +3,8 @@ import math
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional, Dict, Any, List, Tuple, Union
 
+from datetime import datetime, date
+
 
 from entities import Department, Operation, Crop
 
@@ -212,3 +214,16 @@ def create_annotated_field_work_log_schema(
         )
 
     return FieldWorkEntryAnnotated, FieldWorkLogAnnotated
+
+
+# Функция для преобразования строки даты формата "мм-дд" в полноценную дату с текущим годом
+def parse_date_string(date_str: Optional[str]) -> Optional[date]:
+    if not date_str:
+        return None
+    try:
+        month, day = map(int, date_str.split('-'))
+        current_year = datetime.now().year
+        return date(current_year, month, day)
+    except (ValueError, TypeError):
+        logger.warning(f"   ⚠️ Некорректный формат даты: {date_str}, ожидается 'мм-дд'")
+        return None

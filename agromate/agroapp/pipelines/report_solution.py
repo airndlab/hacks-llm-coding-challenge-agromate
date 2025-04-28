@@ -11,6 +11,7 @@ from .utils import (
     _match_crop_id,
     _match_operation_id,
     create_annotated_field_work_log_schema,
+    parse_date_string,
 )
 
 from config import settings
@@ -271,9 +272,16 @@ async def solve_reports(
                 # Сохраняем cumulative_area как None, если модель вернула processed_area_total = None
                 cumulative_area = entry.processed_area_total
                 
+                # Обрабатываем дату работы - используем дату из сообщения если она предоставлена, иначе дату сообщения
+                worked_on_date = parse_date_string(entry.date) or message_created_at.date()
+                if entry.date:
+                    logger.info(f"   📅 Используется дата из сообщения: {entry.date} -> {worked_on_date}")
+                else:
+                    logger.info(f"   📅 Дата не указана, используется дата сообщения: {worked_on_date}")
+                
                 # Создаем объект Report с учетом аннотаций
                 report = Report(
-                    worked_on=message_created_at.date(),
+                    worked_on=message_created_at.date(), # worked_on_date,
                     chat_message_id=message_id,
                     department_id=department_id,
                     operation_id=operation_id,
@@ -422,8 +430,15 @@ async def solve_reports(
                 # Сохраняем cumulative_area как None, если модель вернула processed_area_total = None
                 cumulative_area = entry.processed_area_total
                 
+                # Обрабатываем дату работы - используем дату из сообщения если она предоставлена, иначе дату сообщения
+                worked_on_date = parse_date_string(entry.date) or message_created_at.date()
+                if entry.date:
+                    logger.info(f"   📅 Используется дата из сообщения: {entry.date} -> {worked_on_date}")
+                else:
+                    logger.info(f"   📅 Дата не указана, используется дата сообщения: {worked_on_date}")
+                
                 report = Report(
-                    worked_on=message_created_at.date(),
+                    worked_on=message_created_at.date(), # worked_on_date,
                     chat_message_id=message_id,
                     department_id=department_id,
                     operation_id=operation_id,
